@@ -67,8 +67,8 @@
     input[type="number"] { text-align: right; }
     h1, h2, h3, p { margin: 0; }
     h1 {
-      font-size: clamp(25px, 4.6vw, 38px);
-      line-height: 1.04;
+      font-size: clamp(24px, 3.2vw, 32px);
+      line-height: 1.05;
       letter-spacing: 0;
       font-weight: 850;
     }
@@ -91,7 +91,7 @@
       box-shadow: 0 8px 34px rgba(0, 0, 0, .32);
     }
     .topbar-inner {
-      min-height: 78px;
+      min-height: 76px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -164,6 +164,10 @@
     .view { display: none; }
     .view.active { display: block; }
     .stack { display: grid; gap: 24px; }
+    [data-view="shift"] .stack {
+      width: min(868px, 100%);
+      margin: 0 auto;
+    }
     .section-stack { display: grid; gap: 12px; }
     .muted { color: var(--muted); }
     .small { color: var(--muted); font-size: 13px; }
@@ -186,7 +190,7 @@
     .panel.pad { padding: 20px; }
     .hero {
       display: grid;
-      gap: 9px;
+      gap: 6px;
       border-color: rgba(215, 187, 112, .17);
       background:
         radial-gradient(circle at 90% 0%, rgba(215, 187, 112, .1), transparent 24%),
@@ -618,6 +622,8 @@
 
     @media (max-width: 760px) {
       body { padding-bottom: 86px; }
+      .shell { padding: 0 8px; }
+      main { padding-top: 22px; }
       .status-row .badge:first-child span:last-child { display: none; }
       .row { grid-template-columns: 1fr; gap: 8px; }
       .row input, .row select, .row textarea { text-align: left; }
@@ -627,8 +633,13 @@
       .actions { grid-template-columns: 1fr; }
       .result-total { display: grid; }
       .result-total strong { white-space: normal; }
-      .topbar-inner { align-items: flex-start; padding: 14px 0; }
+      .topbar-inner { align-items: center; padding: 12px 0; gap: 10px; }
       .brand-logo { width: 42px; height: 42px; }
+      h1 { font-size: 26px; }
+      .brand-kicker { font-size: 10px; letter-spacing: .11em; }
+      .version { font-size: 10px; }
+      .badge { padding: 7px 9px; font-size: 11px; }
+      .panel.pad { padding: 16px; }
     }
   </style>
 </head>
@@ -640,7 +651,7 @@
         <div>
           <div class="brand-kicker">RB TAXI Hodonín</div>
           <h1 id="pageTitle">Výčetka řidiče</h1>
-          <p class="version">Hybrid 3.6.45 · vícestránková aplikace</p>
+          <p class="version">VERZE 3.6.45-PREMIUM-POLISH</p>
         </div>
       </div>
       <div class="status-row">
@@ -655,7 +666,7 @@
       <div class="stack">
         <section class="panel pad hero">
           <h2>Výpočet směny</h2>
-          <p class="muted">Vícestránkový přehled používá původní RB TAXI výpočet: fix/provize, minimum 15 Kč/km, smluvní IAC/SHKM km, doplatek a kontrolu hotovosti.</p>
+          <p class="muted">Vyplň směnu a jedním klikem vytvoř čistou výčetku.</p>
         </section>
 
         <section class="section-stack">
