@@ -1,0 +1,1385 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0e1f">
+  <title>RB TAXI - Výčetka řidiče</title>
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.45">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <script defer src="calc.js?v=3.6.45"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --bg-2: #0d1321;
+      --panel: rgba(18, 24, 39, .86);
+      --panel-2: rgba(27, 34, 52, .92);
+      --line: rgba(255, 255, 255, .1);
+      --line-soft: rgba(255, 255, 255, .06);
+      --text: #f2f2f7;
+      --muted: #a9afc3;
+      --muted-2: #727b94;
+      --gold: #d7bb70;
+      --gold-2: #a58338;
+      --blue: #6272ff;
+      --cyan: #22e6c2;
+      --green: #00f5a0;
+      --red: #ff8f86;
+      --amber: #ffc857;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .38);
+      --glow: 0 0 22px rgba(215, 187, 112, .18);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      padding-bottom: 92px;
+      background:
+        radial-gradient(circle at 86% 12%, rgba(0, 245, 160, .08), transparent 28%),
+        radial-gradient(circle at 24% 0%, rgba(215, 187, 112, .12), transparent 30%),
+        linear-gradient(180deg, var(--bg), #07101d 56%, var(--bg));
+      color: var(--text);
+      font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { border: 0; background: transparent; cursor: pointer; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, .09);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .035);
+      outline: none;
+      padding: 11px 12px;
+      color: var(--text);
+    }
+    textarea { resize: vertical; min-height: 120px; }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(215, 187, 112, .68);
+      box-shadow: 0 0 0 3px rgba(215, 187, 112, .12);
+    }
+    input[type="number"] { text-align: right; }
+    h1, h2, h3, p { margin: 0; }
+    h1 {
+      font-size: clamp(25px, 4.6vw, 38px);
+      line-height: 1.04;
+      letter-spacing: 0;
+      font-weight: 850;
+    }
+    h2 { font-size: clamp(21px, 3.8vw, 28px); line-height: 1.2; font-weight: 820; }
+    h3 { font-size: 14px; }
+
+    .shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid var(--line);
+      background: rgba(7, 11, 20, .86);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 34px rgba(0, 0, 0, .32);
+    }
+    .topbar-inner {
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      object-fit: cover;
+      box-shadow: 0 0 18px rgba(215, 187, 112, .22);
+      flex: 0 0 auto;
+    }
+    .brand-kicker {
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .version {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(215, 187, 112, .22);
+      border-radius: 999px;
+      background: rgba(215, 187, 112, .09);
+      color: var(--gold);
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge.online {
+      border-color: rgba(34, 230, 194, .22);
+      background: rgba(34, 230, 194, .08);
+      color: #b5fff2;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(0, 245, 160, .86);
+    }
+
+    main { padding-top: 24px; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .stack { display: grid; gap: 24px; }
+    .section-stack { display: grid; gap: 12px; }
+    .muted { color: var(--muted); }
+    .small { color: var(--muted); font-size: 13px; }
+    .label {
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+    .panel.pad { padding: 20px; }
+    .hero {
+      display: grid;
+      gap: 9px;
+      border-color: rgba(215, 187, 112, .17);
+      background:
+        radial-gradient(circle at 90% 0%, rgba(215, 187, 112, .1), transparent 24%),
+        var(--panel);
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .icon {
+      width: 27px;
+      height: 27px;
+      border-radius: 9px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      background: rgba(215, 187, 112, .11);
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .rows { display: grid; }
+    .row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1fr) minmax(120px, 220px);
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .row:last-child { border-bottom: 0; }
+    .row-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: var(--muted);
+    }
+    .row-label strong { color: var(--text); }
+    .input-unit {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .unit { color: var(--muted-2); }
+
+    .metric {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 15px 14px;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .metric strong {
+      display: block;
+      color: var(--text);
+      font-size: clamp(18px, 4vw, 27px);
+      line-height: 1.1;
+      margin-top: 5px;
+    }
+    .metric.gold strong { color: var(--gold); }
+    .metric.green strong { color: var(--green); }
+    .metric.red strong { color: var(--red); }
+
+    .notice {
+      border: 1px solid rgba(34, 230, 194, .18);
+      border-radius: var(--radius);
+      background: rgba(34, 230, 194, .07);
+      color: #c8fff6;
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+    .notice.bad {
+      border-color: rgba(255, 143, 134, .24);
+      background: rgba(255, 143, 134, .08);
+      color: #ffd8d3;
+    }
+
+    .result {
+      display: grid;
+      gap: 16px;
+      border-color: rgba(215, 187, 112, .2);
+      background:
+        radial-gradient(circle at 92% 8%, rgba(215, 187, 112, .12), transparent 26%),
+        linear-gradient(135deg, rgba(26, 23, 49, .94), rgba(18, 24, 39, .9));
+    }
+    .result-total {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .result-total strong {
+      color: var(--gold);
+      font-size: clamp(32px, 8vw, 52px);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .detail-list {
+      display: grid;
+      gap: 8px;
+    }
+    .detail-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+    }
+    .detail-line strong { color: var(--text); text-align: right; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .primary-btn, .secondary-btn, .danger-btn {
+      min-height: 52px;
+      border-radius: var(--radius);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 12px 16px;
+      font-weight: 900;
+      transition: transform .14s ease, opacity .14s ease, background .14s ease;
+    }
+    .primary-btn {
+      color: #12100a;
+      background: linear-gradient(135deg, #f2d98b, var(--gold-2));
+      box-shadow: var(--glow);
+    }
+    .secondary-btn {
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255, 255, 255, .035);
+    }
+    .danger-btn {
+      border: 1px solid rgba(255, 143, 134, .34);
+      color: var(--red);
+      background: rgba(147, 0, 10, .16);
+    }
+    .primary-btn:active, .secondary-btn:active, .danger-btn:active { transform: scale(.98); }
+    .secondary-btn:hover { background: rgba(255, 255, 255, .06); }
+
+    .filters, .periods {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .pill {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .pill.active {
+      border-color: transparent;
+      color: #12100a;
+      background: linear-gradient(135deg, #f2d98b, var(--gold-2));
+    }
+
+    .history-list { display: grid; gap: 12px; }
+    .history-item {
+      padding: 16px;
+      transition: transform .14s ease, background .14s ease;
+    }
+    .history-item:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, .04);
+    }
+    .history-top, .history-bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+    .history-bottom {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line-soft);
+    }
+    .chip {
+      display: inline-flex;
+      border: 1px solid rgba(34, 230, 194, .22);
+      border-radius: 999px;
+      color: #b5fff2;
+      background: rgba(34, 230, 194, .08);
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .chip.bad {
+      border-color: rgba(255, 143, 134, .28);
+      color: #ffd8d3;
+      background: rgba(255, 143, 134, .08);
+    }
+    .empty {
+      padding: 28px 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .stats-layout {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 12px;
+    }
+    .money-xl {
+      margin-top: 8px;
+      color: var(--gold);
+      font-size: clamp(38px, 8vw, 56px);
+      line-height: 1;
+      font-weight: 950;
+    }
+    .side-metrics { display: grid; gap: 12px; }
+    .chart {
+      height: 210px;
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      padding: 12px 4px 0;
+    }
+    .bar-col {
+      flex: 1;
+      height: 100%;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      align-items: end;
+      gap: 8px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .bar {
+      width: 100%;
+      min-height: 8px;
+      border-radius: 10px 10px 3px 3px;
+      background: rgba(215, 187, 112, .16);
+    }
+    .bar.hot {
+      background: linear-gradient(180deg, #f2d98b, var(--gold-2));
+      box-shadow: 0 0 18px rgba(215, 187, 112, .22);
+    }
+
+    .profile-head {
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      gap: 12px;
+      padding-top: 4px;
+    }
+    .profile-logo {
+      width: 116px;
+      height: 116px;
+      border-radius: 999px;
+      object-fit: cover;
+      box-shadow: var(--glow);
+    }
+    .profile-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 8px;
+      border: 1px solid rgba(0, 245, 160, .28);
+      border-radius: 999px;
+      background: rgba(0, 245, 160, .1);
+      color: #baffec;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .vehicle-card {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+    }
+    .vehicle-mark {
+      width: 92px;
+      height: 92px;
+      border: 1px solid rgba(215, 187, 112, .18);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(215, 187, 112, .17), transparent 42%),
+        rgba(255, 255, 255, .04);
+    }
+    .vehicle-mark img {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      border-radius: 999px;
+    }
+    .vehicle-info {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+    .vehicle-info strong {
+      display: block;
+      color: var(--text);
+      overflow-wrap: anywhere;
+    }
+    .vehicle-info span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .account-actions {
+      display: grid;
+      gap: 12px;
+      padding-top: 4px;
+    }
+    .switch {
+      width: 48px;
+      height: 26px;
+      border-radius: 999px;
+      padding: 4px;
+      display: flex;
+      justify-content: flex-end;
+      background: var(--gold);
+    }
+    .switch:after {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #17130a;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      z-index: 40;
+      width: 100%;
+      border-top: 1px solid var(--line);
+      border-radius: 16px 16px 0 0;
+      background: rgba(16, 22, 36, .92);
+      backdrop-filter: blur(22px);
+      box-shadow: 0 -10px 44px rgba(0, 0, 0, .36);
+    }
+    .bottom-nav-inner {
+      width: min(1120px, 100%);
+      height: 72px;
+      margin: 0 auto;
+      padding: 0 12px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-btn {
+      min-width: 0;
+      height: 50px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 2px;
+      color: rgba(169, 175, 195, .78);
+      font-size: 12px;
+      font-weight: 900;
+      transition: transform .14s ease, color .14s ease, background .14s ease;
+    }
+    .nav-btn .icon { width: auto; height: auto; background: transparent; font-size: 17px; }
+    .nav-btn.active {
+      color: var(--gold);
+      background: rgba(215, 187, 112, .1);
+    }
+    .nav-btn:active { transform: scale(.94); }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 92px;
+      z-index: 60;
+      transform: translateX(-50%) translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      border: 1px solid rgba(34, 230, 194, .22);
+      border-radius: 999px;
+      background: rgba(16, 22, 36, .96);
+      box-shadow: var(--shadow);
+      padding: 10px 16px;
+      color: var(--text);
+      transition: opacity .16s ease, transform .16s ease;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 760px) {
+      body { padding-bottom: 86px; }
+      .status-row .badge:first-child span:last-child { display: none; }
+      .row { grid-template-columns: 1fr; gap: 8px; }
+      .row input, .row select, .row textarea { text-align: left; }
+      input[type="number"] { text-align: right; }
+      .grid-3, .grid-2, .stats-layout { grid-template-columns: 1fr; }
+      .history-top, .history-bottom { align-items: flex-start; flex-direction: column; }
+      .actions { grid-template-columns: 1fr; }
+      .result-total { display: grid; }
+      .result-total strong { white-space: normal; }
+      .topbar-inner { align-items: flex-start; padding: 14px 0; }
+      .brand-logo { width: 42px; height: 42px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <div class="brand">
+        <img class="brand-logo" src="icon-192.png" alt="RB TAXI">
+        <div>
+          <div class="brand-kicker">RB TAXI Hodonín</div>
+          <h1 id="pageTitle">Výčetka řidiče</h1>
+          <p class="version">Hybrid 3.6.45 · vícestránková aplikace</p>
+        </div>
+      </div>
+      <div class="status-row">
+        <div class="badge" id="headerCalcStatus"><span class="dot"></span><span>Připraveno k výpočtu</span></div>
+        <div class="badge online"><span class="dot"></span><span>Online</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="view active" data-view="shift">
+      <div class="stack">
+        <section class="panel pad hero">
+          <h2>Výpočet směny</h2>
+          <p class="muted">Vícestránkový přehled používá původní RB TAXI výpočet: fix/provize, minimum 15 Kč/km, smluvní IAC/SHKM km, doplatek a kontrolu hotovosti.</p>
+        </section>
+
+        <section class="section-stack">
+          <div class="section-title"><span class="icon">Ř</span><h3 class="label">Základní údaje</h3></div>
+          <div class="panel rows">
+            <div class="row">
+              <label class="row-label" for="driver"><span class="icon">O</span><span>Řidič</span></label>
+              <input id="driver" type="text" autocomplete="name" placeholder="Jméno řidiče">
+            </div>
+            <div class="row">
+              <label class="row-label" for="shift"><span class="icon">Č</span><span>Typ směny</span></label>
+              <select id="shift">
+                <option value="den">Denní</option>
+                <option value="noc">Noční</option>
+                <option value="odpo">Odpolední</option>
+                <option value="pul">1/2 směna</option>
+              </select>
+            </div>
+            <div class="row">
+              <label class="row-label" for="rz"><span class="icon">RZ</span><span>RZ vozidla</span></label>
+              <select id="rz"></select>
+            </div>
+            <div class="row">
+              <label class="row-label" for="date"><span class="icon">D</span><span>Datum</span></label>
+              <input id="date" type="date">
+            </div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <div class="section-title"><span class="icon">KM</span><h3 class="label">Kilometry</h3></div>
+          <div class="panel rows">
+            <div class="row">
+              <label class="row-label" for="kmStart"><span class="icon">S</span><span>Počáteční km</span></label>
+              <input id="kmStart" type="number" min="0" inputmode="numeric" placeholder="0">
+            </div>
+            <div class="row">
+              <label class="row-label" for="kmEnd"><span class="icon">C</span><span>Konečné km</span></label>
+              <input id="kmEnd" type="number" min="0" inputmode="numeric" placeholder="0">
+            </div>
+            <div class="row">
+              <div class="row-label"><span class="icon">A</span><span>Najeté km (auto)</span></div>
+              <strong data-out="kmReal">0</strong>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="metric gold"><span>Účtované km</span><strong data-out="chargedKm">0</strong></div>
+            <div class="metric"><span>KM smluvní</span><strong data-out="invoiceKm">0</strong></div>
+            <div class="metric"><span>Minimum tržby</span><strong data-out="minTrzba">0 Kč</strong></div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <div class="section-title"><span class="icon">Kč</span><h3 class="label">Finance</h3></div>
+          <div class="panel rows">
+            <div class="row">
+              <label class="row-label" for="trzba"><span class="icon">T</span><span>Tržba</span></label>
+              <div class="input-unit"><input id="trzba" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div>
+            </div>
+            <div class="row">
+              <label class="row-label" for="pristavne"><span class="icon">P</span><span>Přístavné</span></label>
+              <div class="input-unit"><input id="pristavne" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div>
+            </div>
+            <div class="row">
+              <div class="row-label"><span class="icon">N</span><span>Netto po přístavném</span></div>
+              <strong data-out="netto">0 Kč</strong>
+            </div>
+          </div>
+          <p class="small">Přístavné se nepočítá do provize, ale zůstává v částce k odevzdání.</p>
+        </section>
+
+        <section class="section-stack">
+          <div class="section-title"><span class="icon">N</span><h3 class="label">Náklady a nehotovost</h3></div>
+          <div class="panel rows">
+            <div class="row"><label class="row-label" for="palivo"><span class="icon">F</span><span>Palivo</span></label><div class="input-unit"><input id="palivo" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
+            <div class="row"><label class="row-label" for="myti"><span class="icon">M</span><span>Mytí</span></label><div class="input-unit"><input id="myti" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
+            <div class="row"><label class="row-label" for="jine"><span class="icon">J</span><span>Jiné</span></label><div class="input-unit"><input id="jine" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
+            <div class="row"><label class="row-label" for="kartou"><span class="icon">B</span><span>Kartou</span></label><div class="input-unit"><input id="kartou" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
+            <div class="row"><label class="row-label" for="fakturou"><span class="icon">I</span><span>Fakturou</span></label><div class="input-unit"><input id="fakturou" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <div class="section-title"><span class="icon">H</span><h3 class="label">Kontrola hotovosti</h3></div>
+          <div class="panel rows">
+            <div class="row">
+              <label class="row-label" for="cashActual"><span class="icon">C</span><span>Celá hotovost u sebe</span></label>
+              <div class="input-unit"><input id="cashActual" type="number" min="0" inputmode="decimal" placeholder="volitelné"><span class="unit">Kč</span></div>
+            </div>
+          </div>
+          <div class="notice" id="cashNotice">Kontrola dýška se přeskočí, pokud pole necháš prázdné.</div>
+        </section>
+
+        <section class="section-stack">
+          <div class="section-title"><span class="icon">S</span><h3 class="label">Smluvní jízdy</h3></div>
+          <div class="panel rows">
+            <div class="row">
+              <label class="row-label" for="iacCount"><span class="icon">I</span><span>IAC (počet jízd)</span></label>
+              <input id="iacCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+            </div>
+            <div class="row">
+              <label class="row-label" for="shkmCount"><span class="icon">S</span><span>SHKM (počet jízd)</span></label>
+              <input id="shkmCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+            </div>
+          </div>
+        </section>
+
+        <section class="panel pad result" id="resultCard">
+          <div>
+            <h2>Souhrn výčetky</h2>
+            <p class="small" data-out="payoutMode">Čeká na data směny</p>
+          </div>
+          <div class="grid-2">
+            <div class="metric green"><span>Výplata řidiče</span><strong data-out="vyplata">0 Kč</strong></div>
+            <div class="metric"><span>K odevzdání hotovost</span><strong data-out="kOdevzdani">0 Kč</strong></div>
+            <div class="metric"><span>Doplatek na minimum</span><strong data-out="doplatek">0 Kč</strong></div>
+            <div class="metric"><span>Rozdíl hotovosti</span><strong data-out="cashDiff">-</strong></div>
+          </div>
+          <div class="detail-list">
+            <div class="detail-line"><span>Náklady celkem</span><strong data-out="costs">0 Kč</strong></div>
+            <div class="detail-line"><span>Nehotovost celkem</span><strong data-out="nonCash">0 Kč</strong></div>
+            <div class="detail-line"><span>Má být u sebe vč. výplaty</span><strong data-out="cashExpected">0 Kč</strong></div>
+          </div>
+          <div class="result-total">
+            <div>
+              <span class="label">K odevzdání celkem</span>
+              <p class="small">Hotovost po výplatě + případný doplatek na minimum</p>
+            </div>
+            <strong data-out="settlement">0 Kč</strong>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button class="primary-btn" id="saveShift">Vypočítat a uložit</button>
+          <button class="secondary-btn" id="resetForm">Resetovat</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" data-view="history">
+      <div class="stack">
+        <div class="filters">
+          <button class="pill active" data-history-filter="week">Tento týden</button>
+          <button class="pill" data-history-filter="month">Tento měsíc</button>
+          <button class="pill" data-history-filter="all">Vše</button>
+        </div>
+        <section class="grid-2">
+          <div class="panel pad metric gold"><span>Výdělek řidiče</span><strong data-history="earnings">0 Kč</strong></div>
+          <div class="panel pad metric"><span>Najeté km</span><strong data-history="km">0 km</strong></div>
+        </section>
+        <section class="section-stack">
+          <h2>Nedávné výčetky</h2>
+          <div class="history-list" id="historyList"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" data-view="stats">
+      <div class="stack">
+        <nav class="periods">
+          <button class="pill" data-stats-period="day">Dnes</button>
+          <button class="pill active" data-stats-period="week">Týden</button>
+          <button class="pill" data-stats-period="month">Měsíc</button>
+        </nav>
+        <section class="stats-layout">
+          <div class="panel pad">
+            <p class="label">Celková výplata</p>
+            <div class="money-xl" data-stats="earnings">0 Kč</div>
+            <p class="small" data-stats="trend">Zatím bez dat pro vybrané období</p>
+          </div>
+          <div class="side-metrics">
+            <div class="panel pad metric"><span>Počet směn</span><strong data-stats="shifts">0</strong></div>
+            <div class="panel pad metric gold"><span>Průměr/směna</span><strong data-stats="avg">0 Kč</strong></div>
+          </div>
+        </section>
+        <section class="panel pad">
+          <div class="history-top">
+            <h2>Přehled období</h2>
+            <p class="small" data-stats="range">Týden</p>
+          </div>
+          <div class="chart" id="chart"></div>
+        </section>
+        <section class="section-stack">
+          <h2>Nejlepší dny</h2>
+          <div class="history-list" id="bestDays"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" data-view="account">
+      <div class="stack">
+        <section class="profile-head">
+          <img class="profile-logo" src="icon-512.png" alt="RB TAXI">
+          <div>
+            <h2>Jan Novák</h2>
+            <p class="small">ID řidiče: 48293 · RB TAXI Hodonín</p>
+            <div class="profile-status"><span class="dot"></span>Aktivní</div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <h3 class="label">Osobní údaje</h3>
+          <div class="panel rows">
+            <div class="row"><div class="row-label"><span class="icon">@</span><span>Email</span></div><strong>jan.novak@rbtaxi.cz</strong></div>
+            <div class="row"><div class="row-label"><span class="icon">T</span><span>Telefon</span></div><strong>+420 777 702 702</strong></div>
+            <div class="row"><div class="row-label"><span class="icon">P</span><span>Číslo průkazu</span></div><strong>CZ-928347102</strong></div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <h3 class="label">Vozidlo</h3>
+          <div class="panel vehicle-card">
+            <div class="vehicle-mark"><img src="icon-192.png" alt="RB TAXI"></div>
+            <div class="vehicle-info">
+              <div><span>Aktuální vozidlo</span><strong data-profile="activeRz">—</strong></div>
+              <div><span>Typ vozidla</span><strong>Taxi / osobní přeprava</strong></div>
+              <div><span>Najeto v aplikaci</span><strong data-profile="km">0 km</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <h3 class="label">Nastavení</h3>
+          <div class="panel rows">
+            <div class="row"><div class="row-label"><span class="icon">M</span><span>Tmavý režim</span></div><div class="switch"></div></div>
+            <div class="row"><div class="row-label"><span class="icon">J</span><span>Jazyk</span></div><strong>Čeština</strong></div>
+            <div class="row"><div class="row-label"><span class="icon">S</span><span>Uložené směny</span></div><strong data-profile="shifts">0</strong></div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <h3 class="label">Parametry výpočtu</h3>
+          <div class="panel rows">
+            <div class="row"><label class="row-label" for="setComm"><span class="icon">%</span><span>Provize</span></label><div class="input-unit"><input id="setComm" type="number" min="1" max="100" step="1"><span class="unit">%</span></div></div>
+            <div class="row"><label class="row-label" for="setFull"><span class="icon">F</span><span>Fix plná směna</span></label><div class="input-unit"><input id="setFull" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
+            <div class="row"><label class="row-label" for="setHalf"><span class="icon">1/2</span><span>Fix 1/2 směna</span></label><div class="input-unit"><input id="setHalf" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
+          </div>
+        </section>
+
+        <section class="section-stack">
+          <h3 class="label">Správa vozidel</h3>
+          <div class="panel pad">
+            <label class="small" for="setRzList">RZ vozidel (jedno na řádek)</label>
+            <textarea id="setRzList" spellcheck="false"></textarea>
+          </div>
+        </section>
+
+        <div class="account-actions">
+          <button class="primary-btn" id="saveSettings">Uložit nastavení</button>
+          <button class="secondary-btn" type="button">Změnit heslo</button>
+          <button class="danger-btn" id="clearData">Smazat uložené výčetky</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Hlavní navigace">
+    <div class="bottom-nav-inner">
+      <button class="nav-btn active" data-nav="shift"><span class="icon">Σ</span><span>Směna</span></button>
+      <button class="nav-btn" data-nav="history"><span class="icon">H</span><span>Historie</span></button>
+      <button class="nav-btn" data-nav="stats"><span class="icon">G</span><span>Statistiky</span></button>
+      <button class="nav-btn" data-nav="account"><span class="icon">U</span><span>Účet</span></button>
+    </div>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const VERSION = "hybrid-3.6.45";
+      const historyKey = "rb-hybrid-shifts-v1";
+      const settingsKey = "rb-hybrid-settings-v1";
+      const draftKey = "rb-hybrid-draft-v1";
+      const defaultRz = ["1BU0299", "1BU0060", "2BT6881", "2BT1565", "2BY5398", "2BL8995", "3BD6003"];
+      const titles = {
+        shift: "Výčetka řidiče",
+        history: "Historie výčetek",
+        stats: "Statistiky",
+        account: "Účet řidiče"
+      };
+      const fieldIds = ["driver", "shift", "rz", "date", "kmStart", "kmEnd", "trzba", "pristavne", "palivo", "myti", "jine", "kartou", "fakturou", "cashActual", "iacCount", "shkmCount"];
+      const numericIds = new Set(["kmStart", "kmEnd", "trzba", "pristavne", "palivo", "myti", "jine", "kartou", "fakturou", "cashActual", "iacCount", "shkmCount"]);
+      const state = {
+        shifts: [],
+        historyFilter: "week",
+        statsPeriod: "week",
+        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, rzList: defaultRz }
+      };
+
+      const el = (selector, root = document) => root.querySelector(selector);
+      const els = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+      const byId = (id) => document.getElementById(id);
+      const calc = window.RBCalc;
+
+      function todayISO() {
+        const d = new Date();
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 10);
+      }
+
+      function num(value) {
+        const parsed = Number(String(value || "").replace(",", "."));
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function money(value) {
+        return new Intl.NumberFormat("cs-CZ", {
+          style: "currency",
+          currency: "CZK",
+          maximumFractionDigits: 0
+        }).format(Math.round(Number(value) || 0));
+      }
+
+      function formatInt(value) {
+        return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(Math.round(Number(value) || 0));
+      }
+
+      function formatDate(dateISO) {
+        return new Intl.DateTimeFormat("cs-CZ", { weekday: "long", day: "numeric", month: "short" }).format(new Date(`${dateISO}T12:00:00`));
+      }
+
+      function readJSON(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch {
+          return fallback;
+        }
+      }
+
+      function writeJSON(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
+      }
+
+      function loadState() {
+        state.settings = { ...state.settings, ...readJSON(settingsKey, {}) };
+        state.settings.rzList = normalizeRzList(state.settings.rzList);
+        if (!Array.isArray(state.settings.rzList) || !state.settings.rzList.length) state.settings.rzList = defaultRz;
+        state.shifts = readJSON(historyKey, []);
+        rebuildRzSelect();
+        byId("date").value = todayISO();
+        byId("driver").value = "Jan Novák";
+        restoreDraft();
+        syncSettingsForm();
+      }
+
+      function rebuildRzSelect(selected) {
+        const select = byId("rz");
+        const current = selected ?? select.value;
+        select.innerHTML = '<option value="">— vyberte RZ —</option>';
+        state.settings.rzList.forEach((rz) => {
+          const option = document.createElement("option");
+          option.value = rz;
+          option.textContent = rz;
+          if (rz === current) option.selected = true;
+          select.appendChild(option);
+        });
+      }
+
+      function syncSettingsForm() {
+        byId("setComm").value = state.settings.commRate;
+        byId("setFull").value = state.settings.baseFull;
+        byId("setHalf").value = state.settings.baseHalf;
+        byId("setRzList").value = state.settings.rzList.join("\n");
+      }
+
+      function normalizeRzList(list) {
+        if (!Array.isArray(list)) return defaultRz;
+        return list
+          .flatMap((item) => String(item).split(/\\n|\r?\n/))
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      function readForm() {
+        const values = {};
+        fieldIds.forEach((id) => {
+          if (id === "date") return;
+          values[id] = numericIds.has(id) ? num(byId(id).value) : byId(id).value.trim();
+        });
+        values.driver = values.driver || "Jan Novák";
+        values.hasCashActual = byId("cashActual").value.trim() !== "";
+        return values;
+      }
+
+      function compute(values = readForm()) {
+        return calc.computeMetrics(values, state.settings);
+      }
+
+      function setOut(name, value) {
+        const node = el(`[data-out="${name}"]`);
+        if (node) node.textContent = value;
+      }
+
+      function updateLive() {
+        const metrics = compute();
+        setOut("kmReal", formatInt(metrics.kmReal));
+        setOut("chargedKm", formatInt(metrics.chargedKm));
+        setOut("invoiceKm", formatInt(metrics.invoiceKm));
+        setOut("minTrzba", money(metrics.minTrzba));
+        setOut("netto", money(metrics.netto));
+        setOut("payoutMode", metrics.payoutMode);
+        setOut("vyplata", money(metrics.vyplata));
+        setOut("kOdevzdani", money(metrics.kOdevzdani));
+        setOut("doplatek", money(metrics.doplatek));
+        setOut("cashDiff", metrics.hasCashActual ? moneyWithSign(metrics.cashDiff) : "-");
+        setOut("costs", money(metrics.costs));
+        setOut("nonCash", money(metrics.nonCash));
+        setOut("cashExpected", money(metrics.cashExpected));
+        setOut("settlement", money(metrics.settlement));
+        updateCashNotice(metrics);
+        updateHeader(metrics);
+        saveDraft();
+      }
+
+      function moneyWithSign(value) {
+        if (value > 0) return `+${money(value)}`;
+        return money(value);
+      }
+
+      function updateCashNotice(metrics) {
+        const notice = byId("cashNotice");
+        notice.classList.remove("bad");
+        if (!metrics.hasCashActual) {
+          notice.textContent = "Kontrola dýška se přeskočí, pokud pole necháš prázdné.";
+          return;
+        }
+        if (metrics.cashDiff === 0) {
+          notice.textContent = "Hotovost sedí přesně na očekávanou částku před oddělením výplaty.";
+          return;
+        }
+        if (metrics.cashDiff > 0) {
+          notice.textContent = `Dýško / přebytek: ${money(metrics.cashDiff)}. Výplatu ani částku k odevzdání to nemění.`;
+          return;
+        }
+        notice.classList.add("bad");
+        notice.textContent = `Hotovost chybí o ${money(Math.abs(metrics.cashDiff))}.`;
+      }
+
+      function updateHeader(metrics) {
+        const badge = byId("headerCalcStatus");
+        const text = badge.querySelector("span:last-child");
+        if (!metrics.trzba && !metrics.kmReal) {
+          text.textContent = "Připraveno k výpočtu";
+          return;
+        }
+        text.textContent = metrics.delta >= 0 ? "Směna je nad minimem" : "Směna je pod minimem";
+      }
+
+      function validate(metrics) {
+        const values = readForm();
+        if (!values.driver) return "Vyplň jméno řidiče.";
+        if (!values.rz) return "Vyber RZ vozidla.";
+        if (values.kmStart < 0 || values.kmEnd < 0) return "Kilometry nemohou být záporné.";
+        if (values.kmEnd < values.kmStart) return "Konečné km musí být vyšší než počáteční.";
+        if (values.trzba <= 0) return "Tržba musí být větší než 0.";
+        if (values.pristavne >= values.trzba && values.pristavne > 0) return "Přístavné je vyšší nebo rovno tržbě. Netto by bylo záporné.";
+        if (!Number.isInteger(values.iacCount) || !Number.isInteger(values.shkmCount)) return "IAC a SHKM musí být celé číslo.";
+        if (metrics.invoiceKm > metrics.kmReal) return `Smluvní km (${formatInt(metrics.invoiceKm)}) jsou vyšší než najeté km (${formatInt(metrics.kmReal)}).`;
+        return "";
+      }
+
+      function createShift() {
+        const values = readForm();
+        const metrics = compute(values);
+        const error = validate(metrics);
+        if (error) {
+          toast(error);
+          return null;
+        }
+        return {
+          id: crypto.randomUUID(),
+          savedAt: new Date().toISOString(),
+          date: byId("date").value || todayISO(),
+          ...metrics
+        };
+      }
+
+      function saveShift() {
+        const shift = createShift();
+        if (!shift) return;
+        state.shifts.unshift(shift);
+        writeJSON(historyKey, state.shifts);
+        clearDraft();
+        renderAll();
+        navigate("history");
+        toast("Výčetka je uložená v historii.");
+      }
+
+      function resetForm() {
+        const lastDriver = byId("driver").value || "Jan Novák";
+        const lastRz = byId("rz").value;
+        fieldIds.forEach((id) => {
+          if (id === "driver") byId(id).value = lastDriver;
+          else if (id === "date") byId(id).value = todayISO();
+          else if (id === "shift") byId(id).value = "den";
+          else if (id === "rz") byId(id).value = lastRz;
+          else byId(id).value = "";
+        });
+        clearDraft();
+        updateLive();
+        toast("Formulář je resetovaný.");
+      }
+
+      function saveDraft() {
+        const fields = {};
+        fieldIds.forEach((id) => fields[id] = byId(id).value);
+        writeJSON(draftKey, { fields, savedAt: Date.now() });
+      }
+
+      function clearDraft() {
+        try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ }
+      }
+
+      function restoreDraft() {
+        const draft = readJSON(draftKey, null);
+        if (!draft?.fields) return;
+        Object.entries(draft.fields).forEach(([id, value]) => {
+          const node = byId(id);
+          if (node) node.value = value;
+        });
+      }
+
+      function navigate(view) {
+        els(".view").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
+        els(".nav-btn").forEach((node) => node.classList.toggle("active", node.dataset.nav === view));
+        byId("pageTitle").textContent = titles[view];
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        renderAll();
+      }
+
+      function inPeriod(shift, period) {
+        if (period === "all") return true;
+        const today = new Date(`${todayISO()}T12:00:00`);
+        const date = new Date(`${shift.date}T12:00:00`);
+        const diffDays = Math.floor((today - date) / 86400000);
+        if (period === "day") return diffDays === 0;
+        if (period === "week") return diffDays >= 0 && diffDays < 7;
+        if (period === "month") return diffDays >= 0 && diffDays < 31;
+        return true;
+      }
+
+      function filtered(period) {
+        return state.shifts.filter((shift) => inPeriod(shift, period));
+      }
+
+      function renderHistory() {
+        const shifts = filtered(state.historyFilter);
+        const earnings = shifts.reduce((sum, shift) => sum + shift.vyplata, 0);
+        const km = shifts.reduce((sum, shift) => sum + shift.kmReal, 0);
+        el('[data-history="earnings"]').textContent = money(earnings);
+        el('[data-history="km"]').textContent = `${formatInt(km)} km`;
+        const list = byId("historyList");
+        if (!shifts.length) {
+          list.innerHTML = '<div class="panel empty">Pro vybrané období zatím není uložená žádná výčetka.</div>';
+          return;
+        }
+        list.innerHTML = shifts.map((shift) => `
+          <article class="panel history-item">
+            <div class="history-top">
+              <div class="row-label">
+                <span class="icon">V</span>
+                <div>
+                  <strong>${formatDate(shift.date)}</strong>
+                  <p class="small">RZ: ${escapeHtml(shift.rz || "-")} · ${escapeHtml(shift.shiftLabel)}</p>
+                </div>
+              </div>
+              <div style="text-align:right">
+                <strong style="color:var(--gold);font-size:18px">${money(shift.vyplata)}</strong>
+                <div><span class="chip ${shift.nedoplatek ? "bad" : ""}">${shift.nedoplatek ? "Doplatek" : "Zpracováno"}</span></div>
+              </div>
+            </div>
+            <div class="history-bottom">
+              <div class="small">${formatInt(shift.kmReal)} km · účtováno ${formatInt(shift.chargedKm)} km · ${escapeHtml(shift.payoutMode)}</div>
+              <div class="small">K odevzdání celkem: <strong>${money(shift.settlement)}</strong></div>
+            </div>
+          </article>
+        `).join("");
+      }
+
+      function renderStats() {
+        const shifts = filtered(state.statsPeriod);
+        const earnings = shifts.reduce((sum, shift) => sum + shift.vyplata, 0);
+        const km = shifts.reduce((sum, shift) => sum + shift.kmReal, 0);
+        el('[data-stats="earnings"]').textContent = money(earnings);
+        el('[data-stats="shifts"]').textContent = formatInt(shifts.length);
+        el('[data-stats="avg"]').textContent = money(shifts.length ? earnings / shifts.length : 0);
+        el('[data-stats="trend"]').textContent = km ? `${formatInt(km)} km v období, settlement ${money(shifts.reduce((s, x) => s + x.settlement, 0))}` : "Zatím bez dat pro vybrané období";
+        el('[data-stats="range"]').textContent = state.statsPeriod === "day" ? "Dnes" : state.statsPeriod === "week" ? "Týden" : "Měsíc";
+        renderChart(shifts);
+        renderBestDays(shifts);
+      }
+
+      function renderChart(shifts) {
+        const days = state.statsPeriod === "month" ? 14 : 7;
+        const today = new Date(`${todayISO()}T12:00:00`);
+        const buckets = Array.from({ length: days }, (_, index) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - (days - index - 1));
+          return {
+            iso: d.toISOString().slice(0, 10),
+            label: new Intl.DateTimeFormat("cs-CZ", { weekday: "short" }).format(d).replace(".", ""),
+            value: 0
+          };
+        });
+        shifts.forEach((shift) => {
+          const bucket = buckets.find((item) => item.iso === shift.date);
+          if (bucket) bucket.value += shift.vyplata;
+        });
+        const max = Math.max(1, ...buckets.map((bucket) => bucket.value));
+        byId("chart").innerHTML = buckets.map((bucket) => {
+          const height = Math.max(8, Math.round((bucket.value / max) * 100));
+          return `<div class="bar-col" title="${money(bucket.value)}"><div class="bar ${bucket.value ? "hot" : ""}" style="height:${height}%"></div><span>${bucket.label}</span></div>`;
+        }).join("");
+      }
+
+      function renderBestDays(shifts) {
+        const top = [...shifts].sort((a, b) => b.vyplata - a.vyplata).slice(0, 3);
+        const list = byId("bestDays");
+        if (!top.length) {
+          list.innerHTML = '<div class="panel empty">Až uložíš výčetku, objeví se tady nejlepší dny.</div>';
+          return;
+        }
+        list.innerHTML = top.map((shift) => `
+          <article class="panel history-item">
+            <div class="history-top">
+              <div>
+                <strong>${formatDate(shift.date)}</strong>
+                <p class="small">${formatInt(shift.kmReal)} km · ${escapeHtml(shift.shiftLabel)}</p>
+              </div>
+              <strong style="color:var(--gold)">${money(shift.vyplata)}</strong>
+            </div>
+          </article>
+        `).join("");
+      }
+
+      function renderProfile() {
+        const km = state.shifts.reduce((sum, shift) => sum + shift.kmReal, 0);
+        el('[data-profile="km"]').textContent = `${formatInt(km)} km`;
+        el('[data-profile="shifts"]').textContent = formatInt(state.shifts.length);
+        el('[data-profile="activeRz"]').textContent = byId("rz").value || state.settings.rzList[0] || "—";
+      }
+
+      function renderAll() {
+        updateLive();
+        renderHistory();
+        renderStats();
+        renderProfile();
+      }
+
+      function saveSettings() {
+        const rzList = byId("setRzList").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+        state.settings = {
+          commRate: clamp(num(byId("setComm").value), 1, 100),
+          baseFull: Math.max(0, num(byId("setFull").value)),
+          baseHalf: Math.max(0, num(byId("setHalf").value)),
+          rzList: rzList.length ? rzList : defaultRz
+        };
+        writeJSON(settingsKey, state.settings);
+        rebuildRzSelect(byId("rz").value);
+        syncSettingsForm();
+        renderAll();
+        toast("Nastavení je uložené.");
+      }
+
+      function clearData() {
+        if (!confirm("Opravdu smazat všechny uložené výčetky?")) return;
+        state.shifts = [];
+        writeJSON(historyKey, state.shifts);
+        renderAll();
+        toast("Uložené výčetky jsou smazané.");
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value || min));
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function toast(message) {
+        const node = byId("toast");
+        node.textContent = message;
+        node.classList.add("show");
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => node.classList.remove("show"), 2300);
+      }
+
+      function bind() {
+        fieldIds.forEach((id) => byId(id).addEventListener("input", updateLive));
+        byId("saveShift").addEventListener("click", saveShift);
+        byId("resetForm").addEventListener("click", resetForm);
+        byId("saveSettings").addEventListener("click", saveSettings);
+        byId("clearData").addEventListener("click", clearData);
+        els(".nav-btn").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
+        els("[data-history-filter]").forEach((button) => button.addEventListener("click", () => {
+          state.historyFilter = button.dataset.historyFilter;
+          els("[data-history-filter]").forEach((item) => item.classList.toggle("active", item === button));
+          renderHistory();
+        }));
+        els("[data-stats-period]").forEach((button) => button.addEventListener("click", () => {
+          state.statsPeriod = button.dataset.statsPeriod;
+          els("[data-stats-period]").forEach((item) => item.classList.toggle("active", item === button));
+          renderStats();
+        }));
+      }
+
+      if (!calc?.computeMetrics) {
+        toast("Nepodařilo se načíst výpočetní jádro calc.js.");
+        return;
+      }
+      loadState();
+      bind();
+      renderAll();
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register(`service-worker.js?v=${VERSION}`).catch(() => {});
+      }
+    });
+  </script>
+</body>
+</html>
