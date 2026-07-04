@@ -1,27 +1,31 @@
+
 /*
   calc.js — RB TAXI Výčetka v3.6.45
   Čistá výpočetní logika bez závislosti na DOM nebo localStorage.
   Lze importovat v prohlížeči i spouštět v Node.js (self-testy).
 */
-
+ 
 const CALC_VERSION = "3.6.45";
-
+ 
 const CONSTANTS = {
   minTrzbaPerKm: 15,
   iacKmPerRide: 33,
   shkmKmPerRide: 7,
 };
-
+ 
 const DEFAULT_CONFIG = {
   commRate: 30,
   baseFull: 1000,
   baseHalf: 500,
+  minTrzbaPerKm: CONSTANTS.minTrzbaPerKm,
+  iacKmPerRide: CONSTANTS.iacKmPerRide,
+  shkmKmPerRide: CONSTANTS.shkmKmPerRide,
 };
-
+ 
 function roundMoney(value) {
   return Math.round(Number(value) || 0);
 }
-
+ 
 function getShiftLabel(value) {
   const labels = {
     den: "Denní",
@@ -31,7 +35,7 @@ function getShiftLabel(value) {
   };
   return labels[value] || value || "—";
 }
-
+ 
 /**
  * Výpočet výčetky řidiče.
  * @param {object} values  - hodnoty z formuláře
@@ -41,11 +45,11 @@ function getShiftLabel(value) {
 function computeMetrics(values, config) {
   const cfg = Object.assign({}, DEFAULT_CONFIG, config);
   const kmReal = Math.max(0, values.kmEnd - values.kmStart);
-  const iacKm = (values.iacCount || 0) * CONSTANTS.iacKmPerRide;
-  const shkmKm = (values.shkmCount || 0) * CONSTANTS.shkmKmPerRide;
+  const iacKm = (values.iacCount || 0) * cfg.iacKmPerRide;
+  const shkmKm = (values.shkmCount || 0) * cfg.shkmKmPerRide;
   const invoiceKm = iacKm + shkmKm;
   const chargedKm = Math.max(0, kmReal - invoiceKm);
-  const minTrzba = chargedKm * CONSTANTS.minTrzbaPerKm;
+  const minTrzba = chargedKm * cfg.minTrzbaPerKm;
   const netto = (values.trzba || 0) - (values.pristavne || 0);
   const nonCash = (values.kartou || 0) + (values.fakturou || 0);
   const costs = (values.palivo || 0) + (values.myti || 0) + (values.jine || 0);
@@ -68,7 +72,13 @@ function computeMetrics(values, config) {
   const settlement = kOdevzdani + doplatek;
   const cashExpected = settlement + vyplata;
   const cashDiff = values.hasCashActual ? (values.cashActual || 0) - cashExpected : 0;
-
+  // Pokud garantovaná odměna (fix, nebo doplatek do minima) převýší to, co řidič
+  // reálně vybral, vyjde settlement záporný — to neznamená chybu, ale že firma
+  // řidiči danou směnu naopak dorovnává. Musí se to takto zobrazit, ne jako
+  // "záporná částka k odevzdání".
+  const companyOwes = settlement < 0;
+  const settlementAbs = Math.abs(settlement);
+ 
   return {
     ...values,
     config: cfg,
@@ -89,18 +99,21 @@ function computeMetrics(values, config) {
     delta,
     kOdevzdani,
     settlement,
+    companyOwes,
+    settlementAbs,
     cashExpected,
     cashDiff,
     nedoplatek: doplatek > 0,
   };
 }
-
+ 
 // Node.js / CommonJS export pro self-testy
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { computeMetrics, CONSTANTS, DEFAULT_CONFIG, roundMoney, getShiftLabel, CALC_VERSION };
 }
-
+ 
 // Browser global (pro přístup z app.js bez bundleru)
 if (typeof window !== "undefined") {
   window.RBCalc = { computeMetrics, CONSTANTS, DEFAULT_CONFIG, roundMoney, getShiftLabel, CALC_VERSION };
 }
+ 
