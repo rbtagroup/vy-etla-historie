@@ -882,6 +882,7 @@
           <div class="panel pad metric gold"><span>Výdělek řidiče</span><strong data-history="earnings">0 Kč</strong></div>
           <div class="panel pad metric"><span>Najeté km</span><strong data-history="km">0 km</strong></div>
         </section>
+        <button class="secondary-btn" id="exportCsv" type="button" style="width:100%">Exportovat do Excelu / CSV (pro účetnictví)</button>
         <section class="section-stack">
           <h2>Nedávné výčetky</h2>
           <div class="history-list" id="historyList"></div>
@@ -1639,6 +1640,40 @@
         toast("Nastavení je uložené.");
       }
  
+      function csvCell(value) {
+        const s = String(value ?? "");
+        return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      }
+
+      function exportCsv() {
+        const shifts = filtered(state.historyFilter);
+        if (!shifts.length) { toast("V tomto období nejsou žádné výčetky k exportu."); return; }
+        const header = ["Datum", "Řidič", "RZ", "Směna", "Najeté km", "Účtované km", "Tržba", "Přístavné", "Palivo", "Mytí", "Jiné", "Kartou", "Fakturou", "Výplata řidiče", "K odevzdání", "Firma dorovnává"];
+        const lines = [header.join(";")];
+        shifts.forEach((s) => {
+          const kOdev = s.companyOwes ? 0 : Math.round(s.settlement || 0);
+          const dorov = s.companyOwes ? Math.round(s.settlementAbs || 0) : 0;
+          lines.push([
+            s.date, s.driver || "", s.rz || "", s.shiftLabel || "",
+            Math.round(s.kmReal || 0), Math.round(s.chargedKm || 0), Math.round(s.trzba || 0),
+            Math.round(s.pristavne || 0), Math.round(s.palivo || 0), Math.round(s.myti || 0), Math.round(s.jine || 0),
+            Math.round(s.kartou || 0), Math.round(s.fakturou || 0), Math.round(s.vyplata || 0), kOdev, dorov
+          ].map(csvCell).join(";"));
+        });
+        // BOM + CRLF + středníky = správně otevře české Excely (diakritika)
+        const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const label = state.historyFilter === "month" ? "mesic" : state.historyFilter === "week" ? "tyden" : "vse";
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `rb-taxi-vycetky-${label}-${todayISO()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast(`Vyexportováno ${shifts.length} výčetek (CSV).`);
+      }
+
       function exportData() {
         const payload = {
           exportedAt: new Date().toISOString(),
@@ -1963,6 +1998,7 @@
         byId("resetForm").addEventListener("click", resetForm);
         byId("copySummary").addEventListener("click", copySummary);
         byId("printSummary").addEventListener("click", printSummary);
+        byId("exportCsv").addEventListener("click", exportCsv);
         byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
         byId("adminUnlock").addEventListener("click", unlockAdmin);
         byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
