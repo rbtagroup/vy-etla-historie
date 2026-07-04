@@ -9,6 +9,8 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
+  <!-- Cloud (volitelný, hybrid): appka funguje i bez něj / offline -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       color-scheme: dark;
@@ -929,7 +931,25 @@
             <div class="profile-status"><span class="dot"></span>Aktivní</div>
           </div>
         </section>
- 
+
+        <section class="section-stack">
+          <h3 class="label">Firemní účet (cloud)</h3>
+          <div class="panel pad">
+            <div id="cloudLoggedOut">
+              <div class="row"><label class="row-label" for="cloudCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="cloudCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. sef"></div>
+              <div class="row"><label class="row-label" for="cloudPin"><span class="icon">*</span><span>PIN</span></label><input id="cloudPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN"></div>
+              <button class="primary-btn" id="cloudLogin" type="button" style="width:100%;margin-top:10px">Přihlásit se do cloudu</button>
+              <p class="small" data-cloud="status">Nepřihlášen — appka funguje i bez cloudu, data zůstávají v telefonu. Po přihlášení se výčetky navíc zálohují na firemní server a vidí je vedení.</p>
+            </div>
+            <div id="cloudLoggedIn" style="display:none">
+              <p class="small"><strong data-cloud="who">—</strong></p>
+              <p class="small" data-cloud="syncInfo">—</p>
+              <button class="secondary-btn" id="cloudUpload" type="button" style="width:100%">Nahrát historii z telefonu do cloudu</button>
+              <button class="secondary-btn" id="cloudLogout" type="button" style="width:100%;margin-top:8px">Odhlásit</button>
+            </div>
+          </div>
+        </section>
+
         <section class="section-stack">
           <h3 class="label">Osobní údaje</h3>
           <div class="panel rows">
@@ -1033,11 +1053,18 @@
       };
       const fieldIds = ["driver", "shift", "rz", "date", "kmStart", "kmEnd", "trzba", "pristavne", "palivo", "myti", "jine", "kartou", "fakturou", "cashActual", "iacCount", "shkmCount"];
       const numericIds = new Set(["kmStart", "kmEnd", "trzba", "pristavne", "palivo", "myti", "jine", "kartou", "fakturou", "cashActual", "iacCount", "shkmCount"]);
+      // Cloud (Supabase) — anon klíč je určený k veřejnému použití v klientu,
+      // data chrání Row Level Security na serveru.
+      const SUPABASE_URL = "https://oadjzmotlwwoekydgwxv.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZGp6bW90bHd3b2VreWRnd3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxOTU2NTYsImV4cCI6MjA5ODc3MTY1Nn0.a9aps1jxAqp_6DOszNKVgBkFbOy9jfJitd86swevCNU";
+      const cloudQueueKey = "rb-hybrid-cloud-queue-v1";
+
       const state = {
         shifts: [],
         historyFilter: "week",
         statsPeriod: "week",
         adminUnlocked: false,
+        cloud: { client: null, user: null, driver: null },
         settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz, adminPinHash: "" }
       };
  
@@ -1291,9 +1318,10 @@
         state.shifts.unshift(shift);
         writeJSON(historyKey, state.shifts);
         clearDraft();
+        if (state.cloud.user) { enqueueRows([shiftToRow(shift)]); syncPending(); }
         renderAll();
         navigate("history");
-        toast("Výčetka je uložená v historii.");
+        toast(state.cloud.user ? "Výčetka uložená (a odeslaná do cloudu)." : "Výčetka je uložená v historii.");
       }
  
       function resetForm() {
@@ -1659,6 +1687,127 @@
         toast.timer = setTimeout(() => node.classList.remove("show"), 2300);
       }
  
+      // ---- Cloud (hybrid sync) ----
+      const cloudInputKeys = ["kmStart", "kmEnd", "trzba", "pristavne", "palivo", "myti", "jine", "kartou", "fakturou", "cashActual", "iacCount", "shkmCount", "hasCashActual", "shift", "driver", "rz"];
+      const cloudConfigKeys = ["commRate", "baseFull", "baseHalf", "minTrzbaPerKm", "iacKmPerRide", "shkmKmPerRide"];
+
+      function pick(obj, keys) {
+        const out = {};
+        keys.forEach((k) => { if (obj && obj[k] !== undefined) out[k] = obj[k]; });
+        return out;
+      }
+
+      function sbClient() {
+        if (!window.supabase) return null;
+        if (!state.cloud.client) {
+          state.cloud.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true, storageKey: "rb-vycetka-auth", autoRefreshToken: true }
+          });
+        }
+        return state.cloud.client;
+      }
+
+      // Očistí výčetku od citlivých polí (adminPinHash, kontakty) a namapuje na DB řádek.
+      function shiftToRow(shift) {
+        const metricsClean = { ...shift };
+        delete metricsClean.id;
+        delete metricsClean.savedAt;
+        delete metricsClean.date;
+        metricsClean.config = pick(shift.config || {}, cloudConfigKeys);
+        return {
+          id: shift.id,
+          driver_id: state.cloud.user.id,
+          rz: shift.rz || null,
+          shift_date: shift.date,
+          shift_type: shift.shift || "den",
+          inputs: pick(shift, cloudInputKeys),
+          config: pick(shift.config || {}, cloudConfigKeys),
+          metrics: metricsClean,
+          trzba: Math.round(shift.trzba || 0),
+          km_real: Math.round(shift.kmReal || 0),
+          vyplata: Math.round(shift.vyplata || 0),
+          settlement: Math.round(shift.settlement || 0),
+          company_owes: !!shift.companyOwes
+        };
+      }
+
+      function pendingQueue() { return readJSON(cloudQueueKey, []); }
+      function enqueueRows(rows) {
+        const map = new Map(pendingQueue().map((r) => [r.id, r]));
+        rows.forEach((r) => map.set(r.id, r));
+        writeJSON(cloudQueueKey, Array.from(map.values()));
+      }
+
+      async function syncPending() {
+        const sb = sbClient();
+        if (!sb || !state.cloud.user) { updateCloudUI(); return; }
+        const queue = pendingQueue();
+        if (!queue.length) { updateCloudUI(); return; }
+        const { error } = await sb.from("shifts").upsert(queue, { onConflict: "id" });
+        if (!error) writeJSON(cloudQueueKey, []);
+        updateCloudUI();
+      }
+
+      function updateCloudUI() {
+        const loggedIn = !!state.cloud.user;
+        byId("cloudLoggedOut").style.display = loggedIn ? "none" : "";
+        byId("cloudLoggedIn").style.display = loggedIn ? "" : "none";
+        if (loggedIn) {
+          const d = state.cloud.driver;
+          el('[data-cloud="who"]').textContent = `Přihlášen: ${d?.name || state.cloud.user.email}${d?.is_admin ? " (admin)" : ""}`;
+          const pending = pendingQueue().length;
+          el('[data-cloud="syncInfo"]').textContent = pending ? `Čeká na odeslání: ${pending} výčetek.` : "Vše synchronizováno.";
+        }
+      }
+
+      async function refreshCloudUser() {
+        const sb = sbClient();
+        if (!sb) { updateCloudUI(); return; }
+        const { data } = await sb.auth.getUser();
+        const user = data?.user || null;
+        state.cloud.user = user;
+        if (user) {
+          const { data: drv } = await sb.from("drivers").select("name,is_admin,login_code").eq("id", user.id).maybeSingle();
+          state.cloud.driver = drv || null;
+        } else {
+          state.cloud.driver = null;
+        }
+        updateCloudUI();
+      }
+
+      async function cloudLogin() {
+        const sb = sbClient();
+        if (!sb) { toast("Cloud není dostupný (offline nebo blokovaný)."); return; }
+        const code = byId("cloudCode").value.trim().toLowerCase();
+        const pin = byId("cloudPin").value.trim();
+        if (!code || !pin) { toast("Zadej přihlašovací kód i PIN."); return; }
+        const { error } = await sb.auth.signInWithPassword({ email: `${code}@rbtaxi.local`, password: pin });
+        if (error) { toast("Přihlášení selhalo — špatný kód nebo PIN."); return; }
+        byId("cloudPin").value = "";
+        await refreshCloudUser();
+        toast("Přihlášeno do cloudu.");
+        syncPending();
+      }
+
+      async function cloudLogout() {
+        const sb = sbClient();
+        if (sb) await sb.auth.signOut();
+        state.cloud.user = null;
+        state.cloud.driver = null;
+        updateCloudUI();
+        toast("Odhlášeno z cloudu.");
+      }
+
+      async function cloudUploadAll() {
+        if (!state.cloud.user) return;
+        const rows = state.shifts.map(shiftToRow);
+        enqueueRows(rows);
+        toast(`Zařazeno ${rows.length} výčetek k odeslání…`);
+        await syncPending();
+        const left = pendingQueue().length;
+        toast(left ? `Zbývá odeslat ${left} (offline?).` : "Historie je nahraná v cloudu.");
+      }
+
       function bind() {
         fieldIds.forEach((id) => byId(id).addEventListener("input", updateLive));
         byId("saveShift").addEventListener("click", saveShift);
@@ -1670,6 +1819,10 @@
         byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
         byId("adminLockNow").addEventListener("click", lockAdminNow);
         byId("adminRemovePin").addEventListener("click", removeAdminPin);
+        byId("cloudLogin").addEventListener("click", cloudLogin);
+        byId("cloudLogout").addEventListener("click", cloudLogout);
+        byId("cloudUpload").addEventListener("click", cloudUploadAll);
+        window.addEventListener("online", () => { if (state.cloud.user) syncPending(); });
         byId("saveSettings").addEventListener("click", saveSettings);
         byId("clearData").addEventListener("click", clearData);
         byId("exportData").addEventListener("click", exportData);
@@ -1698,6 +1851,10 @@
       loadState();
       bind();
       renderAll();
+      // Obnovení případné přihlášené cloud session (hybrid — appka funguje i bez ní)
+      if (window.supabase) {
+        refreshCloudUser().then(syncPending).catch(() => {});
+      }
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register(`service-worker.js?v=${VERSION}`).catch(() => {});
       }

@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "rb-taxi-vycetka-";
 // Verze cache = verze appky + datum nasazení. Při každé změně bump tuto
 // konstantu, ať je invalidace cache explicitní (nespoléhá se jen na network-first).
-const CACHE_VERSION = "v3.6.45-2026-07-04";
+const CACHE_VERSION = "v3.7.0-2026-07-05-cloud";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 const APP_SHELL = [
   "./",
