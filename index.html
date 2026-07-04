@@ -946,6 +946,7 @@
                 <div class="row"><label class="row-label" for="regName"><span class="icon">O</span><span>Jméno</span></label><input id="regName" type="text" autocomplete="name" placeholder="Jméno řidiče"></div>
                 <div class="row"><label class="row-label" for="regCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="regCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak (bez mezer a diakritiky)"></div>
                 <div class="row"><label class="row-label" for="regPin"><span class="icon">*</span><span>PIN (min. 6 znaků)</span></label><input id="regPin" type="password" inputmode="numeric" autocomplete="new-password" placeholder="zvol si PIN (aspoň 6 znaků)"></div>
+                <div class="row"><label class="row-label" for="regInvite"><span class="icon">K</span><span>Zvací kód</span></label><input id="regInvite" type="text" autocapitalize="characters" placeholder="firemní zvací kód"></div>
                 <button class="primary-btn" id="cloudRegister" type="button" style="width:100%;margin-top:10px">Vytvořit účet</button>
                 <p class="small">Už máš účet? <a href="#" id="cloudShowLogin">Přihlas se</a></p>
               </div>
@@ -955,8 +956,23 @@
               <p class="small"><strong data-cloud="who">—</strong></p>
               <p class="small" data-cloud="syncInfo">—</p>
               <button class="secondary-btn" id="cloudUpload" type="button" style="width:100%">Nahrát historii z telefonu do cloudu</button>
+              <button class="secondary-btn" id="cloudChangePin" type="button" style="width:100%;margin-top:8px">Změnit PIN</button>
               <button class="secondary-btn" id="cloudLogout" type="button" style="width:100%;margin-top:8px">Odhlásit</button>
             </div>
+          </div>
+        </section>
+
+        <section class="section-stack" id="adminSection" style="display:none">
+          <h3 class="label">Admin — přehled firmy</h3>
+          <div class="filters">
+            <button class="pill active" data-admin-period="week">Týden</button>
+            <button class="pill" data-admin-period="month">Měsíc</button>
+            <button class="pill" data-admin-period="all">Vše</button>
+          </div>
+          <div class="panel pad" id="adminSummary"><p class="small">Načítám…</p></div>
+          <div class="section-stack" style="margin-top:12px">
+            <h3 class="label">Řidiči</h3>
+            <div class="panel pad" id="adminDrivers"><p class="small">—</p></div>
           </div>
         </section>
 
@@ -1074,6 +1090,7 @@
         historyFilter: "week",
         statsPeriod: "week",
         adminUnlocked: false,
+        adminPeriod: "week",
         cloud: { client: null, user: null, driver: null },
         settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz, adminPinHash: "" }
       };
@@ -1777,12 +1794,24 @@
         const user = data?.user || null;
         state.cloud.user = user;
         if (user) {
-          const { data: drv } = await sb.from("drivers").select("name,is_admin,login_code").eq("id", user.id).maybeSingle();
+          const { data: drv } = await sb.from("drivers").select("name,is_admin,login_code,active").eq("id", user.id).maybeSingle();
+          if (drv && drv.active === false) {
+            await sb.auth.signOut();
+            state.cloud.user = null;
+            state.cloud.driver = null;
+            updateCloudUI();
+            renderAdmin();
+            toast("Tento účet je deaktivovaný. Kontaktuj vedení.");
+            return;
+          }
           state.cloud.driver = drv || null;
+          // Auto-předvyplnění jména řidiče do formuláře směny
+          if (drv?.name && !byId("driver").value.trim()) byId("driver").value = drv.name;
         } else {
           state.cloud.driver = null;
         }
         updateCloudUI();
+        renderAdmin();
       }
 
       async function cloudLogin() {
@@ -1795,6 +1824,8 @@
         if (error) { toast("Přihlášení selhalo — špatný kód nebo PIN."); return; }
         byId("cloudPin").value = "";
         await refreshCloudUser();
+        // Pokud je účet deaktivovaný, refreshCloudUser už odhlásil a zobrazil hlášku
+        if (!state.cloud.user) return;
         toast("Přihlášeno do cloudu.");
         syncPending();
       }
@@ -1818,6 +1849,81 @@
         toast(left ? `Zbývá odeslat ${left} (offline?).` : "Historie je nahraná v cloudu.");
       }
 
+      async function cloudChangePin() {
+        const sb = sbClient();
+        if (!sb || !state.cloud.user) return;
+        const pin = prompt("Zadej nový PIN (min. 6 znaků):");
+        if (pin == null) return;
+        const t = pin.trim();
+        if (t.length < 6) { toast("PIN musí mít aspoň 6 znaků."); return; }
+        const again = prompt("Zadej nový PIN znovu:");
+        if (again == null) return;
+        if (again.trim() !== t) { toast("PINy se neshodují."); return; }
+        const { error } = await sb.auth.updateUser({ password: t });
+        toast(error ? "Změna PINu selhala." : "PIN byl změněn.");
+      }
+
+      function adminPeriodFrom(period) {
+        if (period === "all") return null;
+        const d = new Date(`${todayISO()}T12:00:00`);
+        d.setDate(d.getDate() - (period === "month" ? 30 : 6));
+        return d.toISOString().slice(0, 10);
+      }
+
+      async function renderAdmin() {
+        const sb = sbClient();
+        const isAdmin = !!state.cloud.driver?.is_admin;
+        byId("adminSection").style.display = isAdmin ? "" : "none";
+        if (!sb || !isAdmin) return;
+        const from = adminPeriodFrom(state.adminPeriod);
+        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,km_real");
+        if (from) query = query.gte("shift_date", from);
+        const [{ data: shifts, error }, { data: drivers }] = await Promise.all([
+          query,
+          sb.from("drivers").select("id,name,login_code,is_admin,active").order("name")
+        ]);
+        if (error) { byId("adminSummary").innerHTML = '<p class="small">Nepodařilo se načíst data.</p>'; return; }
+        const rows = shifts || [];
+        const totals = rows.reduce((a, s) => {
+          a.count++; a.trzba += s.trzba || 0; a.vyplata += s.vyplata || 0; a.settlement += s.settlement || 0; a.km += s.km_real || 0;
+          return a;
+        }, { count: 0, trzba: 0, vyplata: 0, settlement: 0, km: 0 });
+        byId("adminSummary").innerHTML = `
+          <div class="detail-list">
+            <div class="detail-line"><span>Směn celkem</span><strong>${formatInt(totals.count)}</strong></div>
+            <div class="detail-line"><span>Tržba celkem</span><strong>${money(totals.trzba)}</strong></div>
+            <div class="detail-line"><span>Výplaty řidičů</span><strong>${money(totals.vyplata)}</strong></div>
+            <div class="detail-line"><span>Najeté km</span><strong>${formatInt(totals.km)} km</strong></div>
+            <div class="detail-line"><span>K odevzdání celkem</span><strong>${money(totals.settlement)}</strong></div>
+          </div>`;
+        const byDriver = new Map();
+        rows.forEach((s) => {
+          const cur = byDriver.get(s.driver_id) || { count: 0, trzba: 0, vyplata: 0, settlement: 0 };
+          cur.count++; cur.trzba += s.trzba || 0; cur.vyplata += s.vyplata || 0; cur.settlement += s.settlement || 0;
+          byDriver.set(s.driver_id, cur);
+        });
+        const list = (drivers || []).map((d) => {
+          const a = byDriver.get(d.id) || { count: 0, trzba: 0, vyplata: 0, settlement: 0 };
+          const status = d.active ? "" : ' · <span class="small" style="color:#e6796b">deaktivován</span>';
+          const btn = d.is_admin ? "" :
+            `<button class="secondary-btn" data-driver-toggle="${d.id}" data-active="${d.active}" style="width:auto;padding:6px 10px;margin-top:6px">${d.active ? "Deaktivovat" : "Aktivovat"}</button>`;
+          return `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:4px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(d.name)} <span class="small">(${escapeHtml(d.login_code)})</span>${status}</span><strong>${money(a.trzba)}</strong></div>
+            <div class="small">${formatInt(a.count)} směn · výplata ${money(a.vyplata)} · k odevzdání ${money(a.settlement)}</div>
+            ${btn}
+          </div>`;
+        }).join("");
+        byId("adminDrivers").innerHTML = list || '<p class="small">Žádní řidiči.</p>';
+      }
+
+      async function toggleDriverActive(id, makeActive) {
+        const sb = sbClient();
+        if (!sb) return;
+        const { error } = await sb.from("drivers").update({ active: makeActive }).eq("id", id);
+        toast(error ? "Změna se nezdařila." : (makeActive ? "Řidič aktivován." : "Řidič deaktivován."));
+        renderAdmin();
+      }
+
       function showCloudRegister(show) {
         byId("cloudLoginForm").style.display = show ? "none" : "";
         byId("cloudRegisterForm").style.display = show ? "" : "none";
@@ -1829,10 +1935,13 @@
         const name = byId("regName").value.trim();
         const code = byId("regCode").value.trim().toLowerCase();
         const pin = byId("regPin").value.trim();
-        if (!name || !code || !pin) { toast("Vyplň jméno, kód i PIN."); return; }
+        const invite = byId("regInvite").value.trim();
+        if (!name || !code || !pin || !invite) { toast("Vyplň jméno, kód, PIN i zvací kód."); return; }
         if (pin.length < 6) { toast("PIN musí mít aspoň 6 znaků."); return; }
         if (!/^[a-z0-9._-]+$/.test(code)) { toast("Kód smí mít jen malá písmena bez diakritiky, číslice, . _ -"); return; }
-        const { error } = await sb.auth.signUp({ email: `${code}@rbtaxi.local`, password: pin, options: { data: { name, login_code: code } } });
+        const { data: inviteOk } = await sb.rpc("check_invite", { code: invite });
+        if (!inviteOk) { toast("Špatný zvací kód — vyžádej si ho u firmy."); return; }
+        const { error } = await sb.auth.signUp({ email: `${code}@rbtaxi.local`, password: pin, options: { data: { name, login_code: code, invite_code: invite } } });
         if (error) {
           toast(/already|registered|exist/i.test(error.message) ? "Tento kód už je zabraný, zvol jiný." : `Registrace selhala: ${error.message}`);
           return;
@@ -1865,6 +1974,16 @@
         byId("cloudShowLogin").addEventListener("click", (e) => { e.preventDefault(); showCloudRegister(false); });
         byId("cloudLogout").addEventListener("click", cloudLogout);
         byId("cloudUpload").addEventListener("click", cloudUploadAll);
+        byId("cloudChangePin").addEventListener("click", cloudChangePin);
+        els("[data-admin-period]").forEach((b) => b.addEventListener("click", () => {
+          state.adminPeriod = b.dataset.adminPeriod;
+          els("[data-admin-period]").forEach((x) => x.classList.toggle("active", x === b));
+          renderAdmin();
+        }));
+        byId("adminDrivers").addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-driver-toggle]");
+          if (btn) toggleDriverActive(btn.dataset.driverToggle, btn.dataset.active !== "true");
+        });
         window.addEventListener("online", () => { if (state.cloud.user) syncPending(); });
         byId("saveSettings").addEventListener("click", saveSettings);
         byId("clearData").addEventListener("click", clearData);
