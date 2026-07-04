@@ -936,9 +936,19 @@
           <h3 class="label">Firemní účet (cloud)</h3>
           <div class="panel pad">
             <div id="cloudLoggedOut">
-              <div class="row"><label class="row-label" for="cloudCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="cloudCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. sef"></div>
-              <div class="row"><label class="row-label" for="cloudPin"><span class="icon">*</span><span>PIN</span></label><input id="cloudPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN"></div>
-              <button class="primary-btn" id="cloudLogin" type="button" style="width:100%;margin-top:10px">Přihlásit se do cloudu</button>
+              <div id="cloudLoginForm">
+                <div class="row"><label class="row-label" for="cloudCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="cloudCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak"></div>
+                <div class="row"><label class="row-label" for="cloudPin"><span class="icon">*</span><span>PIN</span></label><input id="cloudPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN"></div>
+                <button class="primary-btn" id="cloudLogin" type="button" style="width:100%;margin-top:10px">Přihlásit se do cloudu</button>
+                <p class="small">Nemáš účet? <a href="#" id="cloudShowRegister">Zaregistruj se</a></p>
+              </div>
+              <div id="cloudRegisterForm" style="display:none">
+                <div class="row"><label class="row-label" for="regName"><span class="icon">O</span><span>Jméno</span></label><input id="regName" type="text" autocomplete="name" placeholder="Jméno řidiče"></div>
+                <div class="row"><label class="row-label" for="regCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="regCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak (bez mezer a diakritiky)"></div>
+                <div class="row"><label class="row-label" for="regPin"><span class="icon">*</span><span>PIN (min. 6 znaků)</span></label><input id="regPin" type="password" inputmode="numeric" autocomplete="new-password" placeholder="zvol si PIN (aspoň 6 znaků)"></div>
+                <button class="primary-btn" id="cloudRegister" type="button" style="width:100%;margin-top:10px">Vytvořit účet</button>
+                <p class="small">Už máš účet? <a href="#" id="cloudShowLogin">Přihlas se</a></p>
+              </div>
               <p class="small" data-cloud="status">Nepřihlášen — appka funguje i bez cloudu, data zůstávají v telefonu. Po přihlášení se výčetky navíc zálohují na firemní server a vidí je vedení.</p>
             </div>
             <div id="cloudLoggedIn" style="display:none">
@@ -1808,6 +1818,36 @@
         toast(left ? `Zbývá odeslat ${left} (offline?).` : "Historie je nahraná v cloudu.");
       }
 
+      function showCloudRegister(show) {
+        byId("cloudLoginForm").style.display = show ? "none" : "";
+        byId("cloudRegisterForm").style.display = show ? "" : "none";
+      }
+
+      async function cloudRegister() {
+        const sb = sbClient();
+        if (!sb) { toast("Cloud není dostupný (offline nebo blokovaný)."); return; }
+        const name = byId("regName").value.trim();
+        const code = byId("regCode").value.trim().toLowerCase();
+        const pin = byId("regPin").value.trim();
+        if (!name || !code || !pin) { toast("Vyplň jméno, kód i PIN."); return; }
+        if (pin.length < 6) { toast("PIN musí mít aspoň 6 znaků."); return; }
+        if (!/^[a-z0-9._-]+$/.test(code)) { toast("Kód smí mít jen malá písmena bez diakritiky, číslice, . _ -"); return; }
+        const { error } = await sb.auth.signUp({ email: `${code}@rbtaxi.local`, password: pin, options: { data: { name, login_code: code } } });
+        if (error) {
+          toast(/already|registered|exist/i.test(error.message) ? "Tento kód už je zabraný, zvol jiný." : `Registrace selhala: ${error.message}`);
+          return;
+        }
+        byId("regPin").value = "";
+        await refreshCloudUser();
+        if (state.cloud.user) {
+          toast("Účet vytvořen a přihlášen.");
+          syncPending();
+        } else {
+          toast("Účet vytvořen — teď se přihlas.");
+          showCloudRegister(false);
+        }
+      }
+
       function bind() {
         fieldIds.forEach((id) => byId(id).addEventListener("input", updateLive));
         byId("saveShift").addEventListener("click", saveShift);
@@ -1820,6 +1860,9 @@
         byId("adminLockNow").addEventListener("click", lockAdminNow);
         byId("adminRemovePin").addEventListener("click", removeAdminPin);
         byId("cloudLogin").addEventListener("click", cloudLogin);
+        byId("cloudRegister").addEventListener("click", cloudRegister);
+        byId("cloudShowRegister").addEventListener("click", (e) => { e.preventDefault(); showCloudRegister(true); });
+        byId("cloudShowLogin").addEventListener("click", (e) => { e.preventDefault(); showCloudRegister(false); });
         byId("cloudLogout").addEventListener("click", cloudLogout);
         byId("cloudUpload").addEventListener("click", cloudUploadAll);
         window.addEventListener("online", () => { if (state.cloud.user) syncPending(); });
