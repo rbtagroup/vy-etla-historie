@@ -32,7 +32,7 @@
       --glow: 0 0 22px rgba(215, 187, 112, .18);
       --radius: 12px;
     }
-
+ 
     * { box-sizing: border-box; }
     html { min-height: 100%; }
     body {
@@ -47,7 +47,7 @@
       font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       -webkit-font-smoothing: antialiased;
     }
-
+ 
     button, input, select, textarea { font: inherit; color: inherit; }
     button { border: 0; background: transparent; cursor: pointer; }
     input, select, textarea {
@@ -74,13 +74,13 @@
     }
     h2 { font-size: clamp(21px, 3.8vw, 28px); line-height: 1.2; font-weight: 820; }
     h3 { font-size: 14px; }
-
+ 
     .shell {
       width: min(1120px, 100%);
       margin: 0 auto;
       padding: 0 20px;
     }
-
+ 
     .topbar {
       position: sticky;
       top: 0;
@@ -159,7 +159,7 @@
       background: var(--green);
       box-shadow: 0 0 14px rgba(0, 245, 160, .86);
     }
-
+ 
     main { padding-top: 24px; }
     .view { display: none; }
     .view.active { display: block; }
@@ -178,7 +178,7 @@
       letter-spacing: .14em;
       text-transform: uppercase;
     }
-
+ 
     .panel {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -214,7 +214,7 @@
       font-weight: 950;
       line-height: 1;
     }
-
+ 
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -250,7 +250,7 @@
       gap: 8px;
     }
     .unit { color: var(--muted-2); }
-
+ 
     .metric {
       min-width: 0;
       border: 1px solid var(--line);
@@ -276,7 +276,7 @@
     .metric.gold strong { color: var(--gold); }
     .metric.green strong { color: var(--green); }
     .metric.red strong { color: var(--red); }
-
+ 
     .notice {
       border: 1px solid rgba(34, 230, 194, .18);
       border-radius: var(--radius);
@@ -290,7 +290,7 @@
       background: rgba(255, 143, 134, .08);
       color: #ffd8d3;
     }
-
+ 
     .result {
       display: grid;
       gap: 16px;
@@ -324,7 +324,7 @@
       color: var(--muted);
     }
     .detail-line strong { color: var(--text); text-align: right; }
-
+ 
     .actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -358,7 +358,7 @@
     }
     .primary-btn:active, .secondary-btn:active, .danger-btn:active { transform: scale(.98); }
     .secondary-btn:hover { background: rgba(255, 255, 255, .06); }
-
+ 
     .filters, .periods {
       display: flex;
       gap: 10px;
@@ -380,7 +380,7 @@
       color: #12100a;
       background: linear-gradient(135deg, #f2d98b, var(--gold-2));
     }
-
+ 
     .history-list { display: grid; gap: 12px; }
     .history-item {
       padding: 16px;
@@ -422,7 +422,7 @@
       text-align: center;
       color: var(--muted);
     }
-
+ 
     .stats-layout {
       display: grid;
       grid-template-columns: 1.2fr .8fr;
@@ -465,7 +465,7 @@
       background: linear-gradient(180deg, #f2d98b, var(--gold-2));
       box-shadow: 0 0 18px rgba(215, 187, 112, .22);
     }
-
+ 
     .profile-head {
       display: grid;
       justify-items: center;
@@ -555,7 +555,7 @@
       border-radius: 999px;
       background: #17130a;
     }
-
+ 
     .bottom-nav {
       position: fixed;
       left: 0;
@@ -597,7 +597,7 @@
       background: rgba(215, 187, 112, .1);
     }
     .nav-btn:active { transform: scale(.94); }
-
+ 
     .toast {
       position: fixed;
       left: 50%;
@@ -619,7 +619,7 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
-
+ 
     @media (max-width: 760px) {
       body { padding-bottom: 86px; }
       .shell { padding: 0 8px; }
@@ -660,7 +660,7 @@
       </div>
     </div>
   </header>
-
+ 
   <main class="shell">
     <section class="view active" data-view="shift">
       <div class="stack">
@@ -668,7 +668,7 @@
           <h2>Výpočet směny</h2>
           <p class="muted">Vyplň směnu a jedním klikem vytvoř čistou výčetku.</p>
         </section>
-
+ 
         <section class="section-stack">
           <div class="section-title"><span class="icon">Ř</span><h3 class="label">Základní údaje</h3></div>
           <div class="panel rows">
@@ -695,7 +695,7 @@
             </div>
           </div>
         </section>
-
+ 
         <section class="section-stack">
           <div class="section-title"><span class="icon">KM</span><h3 class="label">Kilometry</h3></div>
           <div class="panel rows">
@@ -718,7 +718,7 @@
             <div class="metric"><span>Minimum tržby</span><strong data-out="minTrzba">0 Kč</strong></div>
           </div>
         </section>
-
+ 
         <section class="section-stack">
           <div class="section-title"><span class="icon">Kč</span><h3 class="label">Finance</h3></div>
           <div class="panel rows">
@@ -737,7 +737,7 @@
           </div>
           <p class="small">Přístavné se nepočítá do provize, ale zůstává v částce k odevzdání.</p>
         </section>
-
+ 
         <section class="section-stack">
           <div class="section-title"><span class="icon">N</span><h3 class="label">Náklady a nehotovost</h3></div>
           <div class="panel rows">
@@ -748,7 +748,7 @@
             <div class="row"><label class="row-label" for="fakturou"><span class="icon">I</span><span>Fakturou</span></label><div class="input-unit"><input id="fakturou" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
           </div>
         </section>
-
+ 
         <section class="section-stack">
           <div class="section-title"><span class="icon">H</span><h3 class="label">Kontrola hotovosti</h3></div>
           <div class="panel rows">
@@ -759,7 +759,7 @@
           </div>
           <div class="notice" id="cashNotice">Kontrola dýška se přeskočí, pokud pole necháš prázdné.</div>
         </section>
-
+ 
         <section class="section-stack">
           <div class="section-title"><span class="icon">S</span><h3 class="label">Smluvní jízdy</h3></div>
           <div class="panel rows">
@@ -773,7 +773,7 @@
             </div>
           </div>
         </section>
-
+ 
         <section class="panel pad result" id="resultCard">
           <div>
             <h2>Souhrn výčetky</h2>
@@ -790,22 +790,24 @@
             <div class="detail-line"><span>Nehotovost celkem</span><strong data-out="nonCash">0 Kč</strong></div>
             <div class="detail-line"><span>Má být u sebe vč. výplaty</span><strong data-out="cashExpected">0 Kč</strong></div>
           </div>
+          <div class="notice" id="settlementNotice" style="display:none"></div>
           <div class="result-total">
             <div>
-              <span class="label">K odevzdání celkem</span>
-              <p class="small">Hotovost po výplatě + případný doplatek na minimum</p>
+              <span class="label" id="settlementLabel">K odevzdání celkem</span>
+              <p class="small" id="settlementHint">Hotovost po výplatě + případný doplatek na minimum</p>
             </div>
             <strong data-out="settlement">0 Kč</strong>
           </div>
         </section>
-
+ 
         <div class="actions">
           <button class="primary-btn" id="saveShift">Vypočítat a uložit</button>
           <button class="secondary-btn" id="resetForm">Resetovat</button>
         </div>
+        <button class="secondary-btn" id="copySummary" type="button" style="width:100%">Kopírovat souhrn (pro WhatsApp/SMS)</button>
       </div>
     </section>
-
+ 
     <section class="view" data-view="history">
       <div class="stack">
         <div class="filters">
@@ -823,7 +825,7 @@
         </section>
       </div>
     </section>
-
+ 
     <section class="view" data-view="stats">
       <div class="stack">
         <nav class="periods">
@@ -855,27 +857,29 @@
         </section>
       </div>
     </section>
-
+ 
     <section class="view" data-view="account">
       <div class="stack">
         <section class="profile-head">
           <img class="profile-logo" src="icon-512.png" alt="RB TAXI">
           <div>
-            <h2>Jan Novák</h2>
-            <p class="small">ID řidiče: 48293 · RB TAXI Hodonín</p>
+            <h2 data-profile="name">Řidič</h2>
+            <p class="small"><span data-profile="idLabel">ID řidiče: —</span> · RB TAXI Hodonín</p>
             <div class="profile-status"><span class="dot"></span>Aktivní</div>
           </div>
         </section>
-
+ 
         <section class="section-stack">
           <h3 class="label">Osobní údaje</h3>
           <div class="panel rows">
-            <div class="row"><div class="row-label"><span class="icon">@</span><span>Email</span></div><strong>jan.novak@rbtaxi.cz</strong></div>
-            <div class="row"><div class="row-label"><span class="icon">T</span><span>Telefon</span></div><strong>+420 777 702 702</strong></div>
-            <div class="row"><div class="row-label"><span class="icon">P</span><span>Číslo průkazu</span></div><strong>CZ-928347102</strong></div>
+            <div class="row"><label class="row-label" for="profDriverName"><span class="icon">O</span><span>Jméno</span></label><input id="profDriverName" type="text" placeholder="Jméno řidiče"></div>
+            <div class="row"><label class="row-label" for="profDriverId"><span class="icon">P</span><span>ID / číslo průkazu</span></label><input id="profDriverId" type="text" placeholder="např. CZ-000000"></div>
+            <div class="row"><label class="row-label" for="profEmail"><span class="icon">@</span><span>Email</span></label><input id="profEmail" type="email" placeholder="jmeno@rbtaxi.cz"></div>
+            <div class="row"><label class="row-label" for="profPhone"><span class="icon">T</span><span>Telefon</span></label><input id="profPhone" type="tel" placeholder="+420 000 000 000"></div>
           </div>
+          <p class="small">Tyto údaje se ukládají jen v tomto zařízení (localStorage), nikam se neodesílají.</p>
         </section>
-
+ 
         <section class="section-stack">
           <h3 class="label">Vozidlo</h3>
           <div class="panel vehicle-card">
@@ -887,25 +891,29 @@
             </div>
           </div>
         </section>
-
+ 
         <section class="section-stack">
           <h3 class="label">Nastavení</h3>
           <div class="panel rows">
-            <div class="row"><div class="row-label"><span class="icon">M</span><span>Tmavý režim</span></div><div class="switch"></div></div>
+            <div class="row"><div class="row-label"><span class="icon">M</span><span>Tmavý režim</span></div><strong class="small">Vždy zapnuto</strong></div>
             <div class="row"><div class="row-label"><span class="icon">J</span><span>Jazyk</span></div><strong>Čeština</strong></div>
             <div class="row"><div class="row-label"><span class="icon">S</span><span>Uložené směny</span></div><strong data-profile="shifts">0</strong></div>
           </div>
         </section>
-
+ 
         <section class="section-stack">
           <h3 class="label">Parametry výpočtu</h3>
           <div class="panel rows">
             <div class="row"><label class="row-label" for="setComm"><span class="icon">%</span><span>Provize</span></label><div class="input-unit"><input id="setComm" type="number" min="1" max="100" step="1"><span class="unit">%</span></div></div>
             <div class="row"><label class="row-label" for="setFull"><span class="icon">F</span><span>Fix plná směna</span></label><div class="input-unit"><input id="setFull" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
             <div class="row"><label class="row-label" for="setHalf"><span class="icon">1/2</span><span>Fix 1/2 směna</span></label><div class="input-unit"><input id="setHalf" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
+            <div class="row"><label class="row-label" for="setMinKm"><span class="icon">Kč</span><span>Min. tržba / km</span></label><div class="input-unit"><input id="setMinKm" type="number" min="0" step="1"><span class="unit">Kč/km</span></div></div>
+            <div class="row"><label class="row-label" for="setIacKm"><span class="icon">I</span><span>IAC km / jízda</span></label><div class="input-unit"><input id="setIacKm" type="number" min="0" step="1"><span class="unit">km</span></div></div>
+            <div class="row"><label class="row-label" for="setShkmKm"><span class="icon">S</span><span>SHKM km / jízda</span></label><div class="input-unit"><input id="setShkmKm" type="number" min="0" step="1"><span class="unit">km</span></div></div>
           </div>
+          <p class="small">Tyto hodnoty byly dřív zadané napevno v kódu (15 Kč/km, 33 km, 7 km). Teď jsou nastavitelné tady, beze změny obsahu appky.</p>
         </section>
-
+ 
         <section class="section-stack">
           <h3 class="label">Správa vozidel</h3>
           <div class="panel pad">
@@ -913,16 +921,18 @@
             <textarea id="setRzList" spellcheck="false"></textarea>
           </div>
         </section>
-
+ 
         <div class="account-actions">
           <button class="primary-btn" id="saveSettings">Uložit nastavení</button>
-          <button class="secondary-btn" type="button">Změnit heslo</button>
+          <button class="secondary-btn" id="exportData" type="button">Zálohovat data (JSON)</button>
+          <button class="secondary-btn" id="importDataBtn" type="button">Obnovit ze zálohy</button>
+          <input type="file" id="importDataFile" accept="application/json" style="display:none">
           <button class="danger-btn" id="clearData">Smazat uložené výčetky</button>
         </div>
       </div>
     </section>
   </main>
-
+ 
   <nav class="bottom-nav" aria-label="Hlavní navigace">
     <div class="bottom-nav-inner">
       <button class="nav-btn active" data-nav="shift"><span class="icon">Σ</span><span>Směna</span></button>
@@ -931,9 +941,9 @@
       <button class="nav-btn" data-nav="account"><span class="icon">U</span><span>Účet</span></button>
     </div>
   </nav>
-
+ 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
+ 
   <script>
     window.addEventListener("DOMContentLoaded", () => {
       const VERSION = "hybrid-3.6.45";
@@ -953,25 +963,25 @@
         shifts: [],
         historyFilter: "week",
         statsPeriod: "week",
-        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, rzList: defaultRz }
+        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz }
       };
-
+ 
       const el = (selector, root = document) => root.querySelector(selector);
       const els = (selector, root = document) => Array.from(root.querySelectorAll(selector));
       const byId = (id) => document.getElementById(id);
       const calc = window.RBCalc;
-
+ 
       function todayISO() {
         const d = new Date();
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
         return d.toISOString().slice(0, 10);
       }
-
+ 
       function num(value) {
         const parsed = Number(String(value || "").replace(",", "."));
         return Number.isFinite(parsed) ? parsed : 0;
       }
-
+ 
       function money(value) {
         return new Intl.NumberFormat("cs-CZ", {
           style: "currency",
@@ -979,15 +989,15 @@
           maximumFractionDigits: 0
         }).format(Math.round(Number(value) || 0));
       }
-
+ 
       function formatInt(value) {
         return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(Math.round(Number(value) || 0));
       }
-
+ 
       function formatDate(dateISO) {
         return new Intl.DateTimeFormat("cs-CZ", { weekday: "long", day: "numeric", month: "short" }).format(new Date(`${dateISO}T12:00:00`));
       }
-
+ 
       function readJSON(key, fallback) {
         try {
           const raw = localStorage.getItem(key);
@@ -996,11 +1006,11 @@
           return fallback;
         }
       }
-
+ 
       function writeJSON(key, value) {
         try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
       }
-
+ 
       function loadState() {
         state.settings = { ...state.settings, ...readJSON(settingsKey, {}) };
         state.settings.rzList = normalizeRzList(state.settings.rzList);
@@ -1008,11 +1018,11 @@
         state.shifts = readJSON(historyKey, []);
         rebuildRzSelect();
         byId("date").value = todayISO();
-        byId("driver").value = "Jan Novák";
+        byId("driver").value = state.settings.driverName || "";
         restoreDraft();
         syncSettingsForm();
       }
-
+ 
       function rebuildRzSelect(selected) {
         const select = byId("rz");
         const current = selected ?? select.value;
@@ -1025,14 +1035,21 @@
           select.appendChild(option);
         });
       }
-
+ 
       function syncSettingsForm() {
         byId("setComm").value = state.settings.commRate;
         byId("setFull").value = state.settings.baseFull;
         byId("setHalf").value = state.settings.baseHalf;
         byId("setRzList").value = state.settings.rzList.join("\n");
+        byId("setMinKm").value = state.settings.minTrzbaPerKm;
+        byId("setIacKm").value = state.settings.iacKmPerRide;
+        byId("setShkmKm").value = state.settings.shkmKmPerRide;
+        byId("profDriverName").value = state.settings.driverName;
+        byId("profDriverId").value = state.settings.driverId;
+        byId("profEmail").value = state.settings.email;
+        byId("profPhone").value = state.settings.phone;
       }
-
+ 
       function normalizeRzList(list) {
         if (!Array.isArray(list)) return defaultRz;
         return list
@@ -1040,27 +1057,27 @@
           .map((item) => item.trim())
           .filter(Boolean);
       }
-
+ 
       function readForm() {
         const values = {};
         fieldIds.forEach((id) => {
           if (id === "date") return;
           values[id] = numericIds.has(id) ? num(byId(id).value) : byId(id).value.trim();
         });
-        values.driver = values.driver || "Jan Novák";
+        values.driver = values.driver || state.settings.driverName || "";
         values.hasCashActual = byId("cashActual").value.trim() !== "";
         return values;
       }
-
+ 
       function compute(values = readForm()) {
         return calc.computeMetrics(values, state.settings);
       }
-
+ 
       function setOut(name, value) {
         const node = el(`[data-out="${name}"]`);
         if (node) node.textContent = value;
       }
-
+ 
       function updateLive() {
         const metrics = compute();
         setOut("kmReal", formatInt(metrics.kmReal));
@@ -1076,17 +1093,36 @@
         setOut("costs", money(metrics.costs));
         setOut("nonCash", money(metrics.nonCash));
         setOut("cashExpected", money(metrics.cashExpected));
-        setOut("settlement", money(metrics.settlement));
+        updateSettlement(metrics);
         updateCashNotice(metrics);
         updateHeader(metrics);
         saveDraft();
       }
-
+ 
+      function updateSettlement(metrics) {
+        const notice = byId("settlementNotice");
+        const label = byId("settlementLabel");
+        const hint = byId("settlementHint");
+        if (metrics.companyOwes) {
+          setOut("settlement", money(metrics.settlementAbs));
+          label.textContent = "Firma dorovnává řidiči";
+          hint.textContent = "Garantovaná odměna je vyšší než vybraná tržba za směnu.";
+          notice.textContent = `Tuto směnu firma řidiči doplácí ${money(metrics.settlementAbs)} navíc oproti vybrané hotovosti — nejde o částku, kterou by měl řidič odevzdávat.`;
+          notice.classList.remove("bad");
+          notice.style.display = "block";
+        } else {
+          setOut("settlement", money(metrics.settlement));
+          label.textContent = "K odevzdání celkem";
+          hint.textContent = "Hotovost po výplatě + případný doplatek na minimum";
+          notice.style.display = "none";
+        }
+      }
+ 
       function moneyWithSign(value) {
         if (value > 0) return `+${money(value)}`;
         return money(value);
       }
-
+ 
       function updateCashNotice(metrics) {
         const notice = byId("cashNotice");
         notice.classList.remove("bad");
@@ -1105,7 +1141,7 @@
         notice.classList.add("bad");
         notice.textContent = `Hotovost chybí o ${money(Math.abs(metrics.cashDiff))}.`;
       }
-
+ 
       function updateHeader(metrics) {
         const badge = byId("headerCalcStatus");
         const text = badge.querySelector("span:last-child");
@@ -1115,7 +1151,7 @@
         }
         text.textContent = metrics.delta >= 0 ? "Směna je nad minimem" : "Směna je pod minimem";
       }
-
+ 
       function validate(metrics) {
         const values = readForm();
         if (!values.driver) return "Vyplň jméno řidiče.";
@@ -1128,7 +1164,7 @@
         if (metrics.invoiceKm > metrics.kmReal) return `Smluvní km (${formatInt(metrics.invoiceKm)}) jsou vyšší než najeté km (${formatInt(metrics.kmReal)}).`;
         return "";
       }
-
+ 
       function createShift() {
         const values = readForm();
         const metrics = compute(values);
@@ -1144,7 +1180,35 @@
           ...metrics
         };
       }
-
+ 
+      function summaryText(metrics) {
+        const lines = [
+          `RB TAXI – Výčetka řidiče`,
+          `${metrics.driver || "—"} · ${formatDate(byId("date").value || todayISO())} · ${metrics.shiftLabel}`,
+          `RZ: ${metrics.rz || "—"}`,
+          `Najeté km: ${formatInt(metrics.kmReal)} (účtováno ${formatInt(metrics.chargedKm)})`,
+          `Tržba: ${money(metrics.trzba)} · ${metrics.payoutMode}`,
+          `Výplata řidiče: ${money(metrics.vyplata)}`,
+        ];
+        if (metrics.companyOwes) {
+          lines.push(`Firma dorovnává řidiči: ${money(metrics.settlementAbs)}`);
+        } else {
+          lines.push(`K odevzdání celkem: ${money(metrics.settlement)}`);
+        }
+        return lines.join("\n");
+      }
+ 
+      async function copySummary() {
+        const metrics = compute();
+        const text = summaryText(metrics);
+        try {
+          await navigator.clipboard.writeText(text);
+          toast("Souhrn zkopírován do schránky.");
+        } catch {
+          toast("Kopírování se nepodařilo — zkopíruj ručně.");
+        }
+      }
+ 
       function saveShift() {
         const shift = createShift();
         if (!shift) return;
@@ -1155,9 +1219,9 @@
         navigate("history");
         toast("Výčetka je uložená v historii.");
       }
-
+ 
       function resetForm() {
-        const lastDriver = byId("driver").value || "Jan Novák";
+        const lastDriver = byId("driver").value || state.settings.driverName || "";
         const lastRz = byId("rz").value;
         fieldIds.forEach((id) => {
           if (id === "driver") byId(id).value = lastDriver;
@@ -1170,17 +1234,17 @@
         updateLive();
         toast("Formulář je resetovaný.");
       }
-
+ 
       function saveDraft() {
         const fields = {};
         fieldIds.forEach((id) => fields[id] = byId(id).value);
         writeJSON(draftKey, { fields, savedAt: Date.now() });
       }
-
+ 
       function clearDraft() {
         try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ }
       }
-
+ 
       function restoreDraft() {
         const draft = readJSON(draftKey, null);
         if (!draft?.fields) return;
@@ -1189,7 +1253,7 @@
           if (node) node.value = value;
         });
       }
-
+ 
       function navigate(view) {
         els(".view").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
         els(".nav-btn").forEach((node) => node.classList.toggle("active", node.dataset.nav === view));
@@ -1197,7 +1261,7 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
         renderAll();
       }
-
+ 
       function inPeriod(shift, period) {
         if (period === "all") return true;
         const today = new Date(`${todayISO()}T12:00:00`);
@@ -1208,11 +1272,11 @@
         if (period === "month") return diffDays >= 0 && diffDays < 31;
         return true;
       }
-
+ 
       function filtered(period) {
         return state.shifts.filter((shift) => inPeriod(shift, period));
       }
-
+ 
       function renderHistory() {
         const shifts = filtered(state.historyFilter);
         const earnings = shifts.reduce((sum, shift) => sum + shift.vyplata, 0);
@@ -1241,12 +1305,12 @@
             </div>
             <div class="history-bottom">
               <div class="small">${formatInt(shift.kmReal)} km · účtováno ${formatInt(shift.chargedKm)} km · ${escapeHtml(shift.payoutMode)}</div>
-              <div class="small">K odevzdání celkem: <strong>${money(shift.settlement)}</strong></div>
+              <div class="small">${shift.companyOwes ? `Firma dorovnává řidiči: <strong>${money(shift.settlementAbs)}</strong>` : `K odevzdání celkem: <strong>${money(shift.settlement)}</strong>`}</div>
             </div>
           </article>
         `).join("");
       }
-
+ 
       function renderStats() {
         const shifts = filtered(state.statsPeriod);
         const earnings = shifts.reduce((sum, shift) => sum + shift.vyplata, 0);
@@ -1259,7 +1323,7 @@
         renderChart(shifts);
         renderBestDays(shifts);
       }
-
+ 
       function renderChart(shifts) {
         const days = state.statsPeriod === "month" ? 14 : 7;
         const today = new Date(`${todayISO()}T12:00:00`);
@@ -1282,7 +1346,7 @@
           return `<div class="bar-col" title="${money(bucket.value)}"><div class="bar ${bucket.value ? "hot" : ""}" style="height:${height}%"></div><span>${bucket.label}</span></div>`;
         }).join("");
       }
-
+ 
       function renderBestDays(shifts) {
         const top = [...shifts].sort((a, b) => b.vyplata - a.vyplata).slice(0, 3);
         const list = byId("bestDays");
@@ -1302,36 +1366,91 @@
           </article>
         `).join("");
       }
-
+ 
       function renderProfile() {
         const km = state.shifts.reduce((sum, shift) => sum + shift.kmReal, 0);
         el('[data-profile="km"]').textContent = `${formatInt(km)} km`;
         el('[data-profile="shifts"]').textContent = formatInt(state.shifts.length);
         el('[data-profile="activeRz"]').textContent = byId("rz").value || state.settings.rzList[0] || "—";
+        el('[data-profile="name"]').textContent = state.settings.driverName || "Řidič";
+        el('[data-profile="idLabel"]').textContent = state.settings.driverId ? `ID řidiče: ${state.settings.driverId}` : "ID řidiče: —";
       }
-
+ 
       function renderAll() {
         updateLive();
         renderHistory();
         renderStats();
         renderProfile();
       }
-
+ 
       function saveSettings() {
         const rzList = byId("setRzList").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
         state.settings = {
           commRate: clamp(num(byId("setComm").value), 1, 100),
           baseFull: Math.max(0, num(byId("setFull").value)),
           baseHalf: Math.max(0, num(byId("setHalf").value)),
+          minTrzbaPerKm: Math.max(0, num(byId("setMinKm").value)),
+          iacKmPerRide: Math.max(0, num(byId("setIacKm").value)),
+          shkmKmPerRide: Math.max(0, num(byId("setShkmKm").value)),
+          driverName: byId("profDriverName").value.trim(),
+          driverId: byId("profDriverId").value.trim(),
+          email: byId("profEmail").value.trim(),
+          phone: byId("profPhone").value.trim(),
           rzList: rzList.length ? rzList : defaultRz
         };
         writeJSON(settingsKey, state.settings);
         rebuildRzSelect(byId("rz").value);
+        if (!byId("driver").value.trim()) byId("driver").value = state.settings.driverName;
         syncSettingsForm();
         renderAll();
         toast("Nastavení je uložené.");
       }
-
+ 
+      function exportData() {
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          appVersion: VERSION,
+          settings: state.settings,
+          shifts: state.shifts
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `rb-taxi-vycetka-zaloha-${todayISO()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast("Záloha byla stažena.");
+      }
+ 
+      function importData(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(String(reader.result));
+            if (!Array.isArray(data.shifts)) throw new Error("neplatný formát");
+            if (!confirm(`Načíst zálohu s ${data.shifts.length} výčetkami? Přepíše to aktuální data v tomto zařízení.`)) return;
+            state.shifts = data.shifts;
+            if (data.settings) {
+              state.settings = { ...state.settings, ...data.settings };
+              state.settings.rzList = normalizeRzList(state.settings.rzList);
+            }
+            writeJSON(historyKey, state.shifts);
+            writeJSON(settingsKey, state.settings);
+            rebuildRzSelect();
+            syncSettingsForm();
+            renderAll();
+            toast("Záloha byla načtena.");
+          } catch {
+            toast("Soubor se zálohou se nepodařilo přečíst.");
+          }
+        };
+        reader.readAsText(file);
+      }
+ 
       function clearData() {
         if (!confirm("Opravdu smazat všechny uložené výčetky?")) return;
         state.shifts = [];
@@ -1339,11 +1458,11 @@
         renderAll();
         toast("Uložené výčetky jsou smazané.");
       }
-
+ 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value || min));
       }
-
+ 
       function escapeHtml(value) {
         return String(value ?? "")
           .replace(/&/g, "&amp;")
@@ -1352,7 +1471,7 @@
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#39;");
       }
-
+ 
       function toast(message) {
         const node = byId("toast");
         node.textContent = message;
@@ -1360,13 +1479,20 @@
         clearTimeout(toast.timer);
         toast.timer = setTimeout(() => node.classList.remove("show"), 2300);
       }
-
+ 
       function bind() {
         fieldIds.forEach((id) => byId(id).addEventListener("input", updateLive));
         byId("saveShift").addEventListener("click", saveShift);
         byId("resetForm").addEventListener("click", resetForm);
+        byId("copySummary").addEventListener("click", copySummary);
         byId("saveSettings").addEventListener("click", saveSettings);
         byId("clearData").addEventListener("click", clearData);
+        byId("exportData").addEventListener("click", exportData);
+        byId("importDataBtn").addEventListener("click", () => byId("importDataFile").click());
+        byId("importDataFile").addEventListener("change", (event) => {
+          importData(event.target.files[0]);
+          event.target.value = "";
+        });
         els(".nav-btn").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
         els("[data-history-filter]").forEach((button) => button.addEventListener("click", () => {
           state.historyFilter = button.dataset.historyFilter;
@@ -1379,7 +1505,7 @@
           renderStats();
         }));
       }
-
+ 
       if (!calc?.computeMetrics) {
         toast("Nepodařilo se načíst výpočetní jádro calc.js.");
         return;
@@ -1394,3 +1520,4 @@
   </script>
 </body>
 </html>
+ 
