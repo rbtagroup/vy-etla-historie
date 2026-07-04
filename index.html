@@ -835,7 +835,16 @@
             </div>
           </div>
         </section>
- 
+
+        <section class="section-stack" id="photoSection">
+          <div class="section-title"><span class="icon">F</span><h3 class="label">Fotky (volitelné)</h3></div>
+          <div class="panel rows">
+            <div class="row"><label class="row-label" for="photoTacho"><span class="icon">T</span><span>Foto tachometru</span></label><input id="photoTacho" type="file" accept="image/*" capture="environment"></div>
+            <div class="row"><label class="row-label" for="photoReceipt"><span class="icon">Ú</span><span>Foto účtenky</span></label><input id="photoReceipt" type="file" accept="image/*" capture="environment"></div>
+          </div>
+          <p class="small" data-photo="hint">Fotky se uloží k výčetce jen když jsi přihlášený do cloudu — slouží jako audit stopa při případném sporu.</p>
+        </section>
+
         <section class="panel pad result" id="resultCard">
           <div>
             <h2>Souhrn výčetky</h2>
@@ -971,6 +980,7 @@
             <button class="pill" data-admin-period="all">Vše</button>
           </div>
           <div class="panel pad" id="adminSummary"><p class="small">Načítám…</p></div>
+          <button class="secondary-btn" id="adminExportCsv" type="button" style="width:100%;margin-top:10px">Exportovat období za všechny řidiče (CSV)</button>
           <div class="section-stack" style="margin-top:12px">
             <h3 class="label">Řidiči</h3>
             <div class="panel pad" id="adminDrivers"><p class="small">—</p></div>
@@ -1340,13 +1350,20 @@
         }
       }
  
-      function saveShift() {
+      async function saveShift() {
         const shift = createShift();
         if (!shift) return;
+        const hasPhotos = byId("photoTacho").files[0] || byId("photoReceipt").files[0];
+        if (state.cloud.user && hasPhotos) {
+          toast("Nahrávám fotky…");
+          Object.assign(shift, await uploadShiftPhotos(shift.id));
+        }
         state.shifts.unshift(shift);
         writeJSON(historyKey, state.shifts);
         clearDraft();
         if (state.cloud.user) { enqueueRows([shiftToRow(shift)]); syncPending(); }
+        byId("photoTacho").value = "";
+        byId("photoReceipt").value = "";
         renderAll();
         navigate("history");
         toast(state.cloud.user ? "Výčetka uložená (a odeslaná do cloudu)." : "Výčetka je uložená v historii.");
@@ -1439,6 +1456,7 @@
               <div class="small">${formatInt(shift.kmReal)} km · účtováno ${formatInt(shift.chargedKm)} km · ${escapeHtml(shift.payoutMode)}</div>
               <div class="small">${shift.companyOwes ? `Firma dorovnává řidiči: <strong>${money(shift.settlementAbs)}</strong>` : `K odevzdání celkem: <strong>${money(shift.settlement)}</strong>`}</div>
             </div>
+            ${(shift.photo_tacho || shift.photo_receipt) ? `<div class="small" style="margin-top:6px">Fotky: ${shift.photo_tacho ? `<a href="#" data-photo-path="${escapeHtml(shift.photo_tacho)}">tachometr</a>` : ""}${(shift.photo_tacho && shift.photo_receipt) ? " · " : ""}${shift.photo_receipt ? `<a href="#" data-photo-path="${escapeHtml(shift.photo_receipt)}">účtenka</a>` : ""}</div>` : ""}
           </article>
         `).join("");
       }
@@ -1645,9 +1663,8 @@
         return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
       }
 
-      function exportCsv() {
-        const shifts = filtered(state.historyFilter);
-        if (!shifts.length) { toast("V tomto období nejsou žádné výčetky k exportu."); return; }
+      // Sestaví CSV z pole "plochých" výčetek (lokální shift objekt i namapovaný cloud řádek).
+      function buildCsv(shifts) {
         const header = ["Datum", "Řidič", "RZ", "Směna", "Najeté km", "Účtované km", "Tržba", "Přístavné", "Palivo", "Mytí", "Jiné", "Kartou", "Fakturou", "Výplata řidiče", "K odevzdání", "Firma dorovnává"];
         const lines = [header.join(";")];
         shifts.forEach((s) => {
@@ -1660,18 +1677,57 @@
             Math.round(s.kartou || 0), Math.round(s.fakturou || 0), Math.round(s.vyplata || 0), kOdev, dorov
           ].map(csvCell).join(";"));
         });
-        // BOM + CRLF + středníky = správně otevře české Excely (diakritika)
-        const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+        return "﻿" + lines.join("\r\n"); // BOM + CRLF = česká diakritika v Excelu
+      }
+
+      function downloadCsv(text, name) {
+        const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
-        const label = state.historyFilter === "month" ? "mesic" : state.historyFilter === "week" ? "tyden" : "vse";
         const a = document.createElement("a");
         a.href = url;
-        a.download = `rb-taxi-vycetky-${label}-${todayISO()}.csv`;
+        a.download = name;
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+      }
+
+      function periodLabel(period) {
+        return period === "month" ? "mesic" : period === "week" ? "tyden" : "vse";
+      }
+
+      function exportCsv() {
+        const shifts = filtered(state.historyFilter);
+        if (!shifts.length) { toast("V tomto období nejsou žádné výčetky k exportu."); return; }
+        downloadCsv(buildCsv(shifts), `rb-taxi-vycetky-${periodLabel(state.historyFilter)}-${todayISO()}.csv`);
         toast(`Vyexportováno ${shifts.length} výčetek (CSV).`);
+      }
+
+      // Admin: export z cloudu za VŠECHNY řidiče za zvolené období.
+      async function adminExportCsv() {
+        const sb = sbClient();
+        if (!sb || !state.cloud.driver?.is_admin) return;
+        const from = adminPeriodFrom(state.adminPeriod);
+        let query = sb.from("shifts").select("shift_date,rz,trzba,km_real,vyplata,settlement,company_owes,metrics,driver_id").order("shift_date");
+        if (from) query = query.gte("shift_date", from);
+        const [{ data: rows, error }, { data: drivers }] = await Promise.all([
+          query,
+          sb.from("drivers").select("id,name")
+        ]);
+        if (error) { toast("Export z cloudu selhal."); return; }
+        if (!rows || !rows.length) { toast("V tomto období nejsou žádné výčetky."); return; }
+        const names = new Map((drivers || []).map((d) => [d.id, d.name]));
+        const flat = rows.map((r) => ({
+          ...(r.metrics || {}),
+          date: r.shift_date,
+          driver: names.get(r.driver_id) || r.metrics?.driver || "",
+          rz: r.rz,
+          settlement: r.settlement,
+          settlementAbs: r.metrics?.settlementAbs ?? Math.abs(r.settlement || 0),
+          companyOwes: r.company_owes
+        }));
+        downloadCsv(buildCsv(flat), `rb-taxi-vsichni-ridici-${periodLabel(state.adminPeriod)}-${todayISO()}.csv`);
+        toast(`Export ${flat.length} výčetek (všichni řidiči).`);
       }
 
       function exportData() {
@@ -1789,8 +1845,35 @@
           km_real: Math.round(shift.kmReal || 0),
           vyplata: Math.round(shift.vyplata || 0),
           settlement: Math.round(shift.settlement || 0),
-          company_owes: !!shift.companyOwes
+          company_owes: !!shift.companyOwes,
+          photo_tacho: shift.photo_tacho || null,
+          photo_receipt: shift.photo_receipt || null
         };
+      }
+
+      async function uploadShiftPhotos(shiftId) {
+        const sb = sbClient();
+        const paths = {};
+        if (!sb || !state.cloud.user) return paths;
+        const uid = state.cloud.user.id;
+        const inputs = [["photoTacho", "tacho", "photo_tacho"], ["photoReceipt", "receipt", "photo_receipt"]];
+        for (const [inputId, kind, col] of inputs) {
+          const file = byId(inputId).files[0];
+          if (!file) continue;
+          const ext = ((file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "")) || "jpg";
+          const path = `${uid}/${shiftId}/${kind}.${ext}`;
+          const { error } = await sb.storage.from("shift-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+          if (!error) paths[col] = path;
+        }
+        return paths;
+      }
+
+      async function openPhoto(path) {
+        const sb = sbClient();
+        if (!sb || !state.cloud.user) { toast("Pro zobrazení fotky se přihlas do cloudu."); return; }
+        const { data, error } = await sb.storage.from("shift-photos").createSignedUrl(path, 300);
+        if (error || !data) { toast("Fotku se nepodařilo načíst."); return; }
+        window.open(data.signedUrl, "_blank");
       }
 
       function pendingQueue() { return readJSON(cloudQueueKey, []); }
@@ -2011,6 +2094,7 @@
         byId("cloudLogout").addEventListener("click", cloudLogout);
         byId("cloudUpload").addEventListener("click", cloudUploadAll);
         byId("cloudChangePin").addEventListener("click", cloudChangePin);
+        byId("adminExportCsv").addEventListener("click", adminExportCsv);
         els("[data-admin-period]").forEach((b) => b.addEventListener("click", () => {
           state.adminPeriod = b.dataset.adminPeriod;
           els("[data-admin-period]").forEach((x) => x.classList.toggle("active", x === b));
@@ -2019,6 +2103,10 @@
         byId("adminDrivers").addEventListener("click", (e) => {
           const btn = e.target.closest("[data-driver-toggle]");
           if (btn) toggleDriverActive(btn.dataset.driverToggle, btn.dataset.active !== "true");
+        });
+        byId("historyList").addEventListener("click", (e) => {
+          const link = e.target.closest("[data-photo-path]");
+          if (link) { e.preventDefault(); openPhoto(link.dataset.photoPath); }
         });
         window.addEventListener("online", () => { if (state.cloud.user) syncPending(); });
         byId("saveSettings").addEventListener("click", saveSettings);
