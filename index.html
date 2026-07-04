@@ -641,6 +641,66 @@
       .badge { padding: 7px 9px; font-size: 11px; }
       .panel.pad { padding: 16px; }
     }
+
+    /* Zámek parametrů (PIN) */
+    .admin-lock-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .admin-lock-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-lock-actions .secondary-btn {
+      width: auto;
+      padding: 8px 14px;
+    }
+    input:disabled, textarea:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    /* Tisk / uložení do PDF */
+    #printSheet { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #printSheet, #printSheet * { visibility: visible; }
+      #printSheet {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 24px;
+        color: #000;
+        background: #fff;
+      }
+      .print-head h1 { margin: 0; font-size: 20px; }
+      .print-head p { margin: 2px 0 16px; color: #333; }
+      .print-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+      .print-table th, .print-table td {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid #ccc;
+        font-size: 13px;
+      }
+      .print-table th { font-weight: 600; width: 48%; }
+      .print-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 8px;
+        border-top: 2px solid #000;
+        font-size: 16px;
+      }
+      .print-foot { margin-top: 24px; font-size: 11px; color: #666; }
+      @page { margin: 16mm; }
+    }
   </style>
 </head>
 <body>
@@ -805,6 +865,7 @@
           <button class="secondary-btn" id="resetForm">Resetovat</button>
         </div>
         <button class="secondary-btn" id="copySummary" type="button" style="width:100%">Kopírovat souhrn (pro WhatsApp/SMS)</button>
+        <button class="secondary-btn" id="printSummary" type="button" style="width:100%">Vytisknout / Uložit jako PDF</button>
       </div>
     </section>
  
@@ -903,6 +964,17 @@
  
         <section class="section-stack">
           <h3 class="label">Parametry výpočtu</h3>
+          <div class="admin-lock-bar">
+            <span class="small" data-admin="status">Parametry nejsou chráněné PINem.</span>
+            <div class="admin-lock-actions">
+              <button class="secondary-btn" id="adminSetPin" type="button">Nastavit PIN</button>
+              <button class="secondary-btn" id="adminUnlock" type="button" style="display:none">Odemknout</button>
+              <button class="secondary-btn" id="adminChangePin" type="button" style="display:none">Změnit PIN</button>
+              <button class="secondary-btn" id="adminLockNow" type="button" style="display:none">Zamknout</button>
+              <button class="secondary-btn" id="adminRemovePin" type="button" style="display:none">Zrušit PIN</button>
+            </div>
+          </div>
+          <p class="small" data-admin="disclaimer">PIN je jen brzda proti nechtěné změně parametrů, ne skutečné zabezpečení. Aplikace nemá server — data i tento PIN žijí jen v tomto telefonu, takže technicky zdatný uživatel je dokáže přečíst i obejít.</p>
           <div class="panel rows">
             <div class="row"><label class="row-label" for="setComm"><span class="icon">%</span><span>Provize</span></label><div class="input-unit"><input id="setComm" type="number" min="1" max="100" step="1"><span class="unit">%</span></div></div>
             <div class="row"><label class="row-label" for="setFull"><span class="icon">F</span><span>Fix plná směna</span></label><div class="input-unit"><input id="setFull" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
@@ -942,6 +1014,8 @@
     </div>
   </nav>
  
+  <div id="printSheet" aria-hidden="true"></div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
  
   <script>
@@ -963,7 +1037,8 @@
         shifts: [],
         historyFilter: "week",
         statsPeriod: "week",
-        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz }
+        adminUnlocked: false,
+        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz, adminPinHash: "" }
       };
  
       const el = (selector, root = document) => root.querySelector(selector);
@@ -1021,6 +1096,7 @@
         byId("driver").value = state.settings.driverName || "";
         restoreDraft();
         syncSettingsForm();
+        applyAdminLock();
       }
  
       function rebuildRzSelect(selected) {
@@ -1383,6 +1459,106 @@
         renderProfile();
       }
  
+      const adminParamIds = ["setComm", "setFull", "setHalf", "setMinKm", "setIacKm", "setShkmKm", "setRzList"];
+
+      async function sha256Hex(text) {
+        const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+        return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      function applyAdminLock() {
+        const hasPin = Boolean(state.settings.adminPinHash);
+        const locked = hasPin && !state.adminUnlocked;
+        adminParamIds.forEach((id) => { const node = byId(id); if (node) node.disabled = locked; });
+        const status = el('[data-admin="status"]');
+        if (status) {
+          status.textContent = !hasPin
+            ? "Parametry nejsou chráněné PINem."
+            : locked ? "Parametry jsou zamčené." : "Parametry odemčené (do zavření aplikace).";
+        }
+        const show = (id, cond) => { const node = byId(id); if (node) node.style.display = cond ? "" : "none"; };
+        show("adminSetPin", !hasPin);
+        show("adminUnlock", hasPin && locked);
+        show("adminChangePin", hasPin && !locked);
+        show("adminLockNow", hasPin && !locked);
+        show("adminRemovePin", hasPin && !locked);
+      }
+
+      async function setAdminPin(changing) {
+        const pin = prompt(changing ? "Zadej nový PIN (min. 4 znaky):" : "Zadej PIN pro zámek parametrů (min. 4 znaky):");
+        if (pin == null) return;
+        const trimmed = pin.trim();
+        if (trimmed.length < 4) { toast("PIN musí mít aspoň 4 znaky."); return; }
+        const again = prompt("Zadej PIN znovu pro potvrzení:");
+        if (again == null) return;
+        if (again.trim() !== trimmed) { toast("PINy se neshodují."); return; }
+        state.settings.adminPinHash = await sha256Hex(trimmed);
+        state.adminUnlocked = true;
+        writeJSON(settingsKey, state.settings);
+        applyAdminLock();
+        toast(changing ? "PIN byl změněn." : "PIN je nastavený. Parametry jsou teď chráněné.");
+      }
+
+      async function unlockAdmin() {
+        const pin = prompt("Zadej PIN pro odemknutí parametrů:");
+        if (pin == null) return;
+        const hash = await sha256Hex(pin.trim());
+        if (hash === state.settings.adminPinHash) {
+          state.adminUnlocked = true;
+          applyAdminLock();
+          toast("Parametry odemčené.");
+        } else {
+          toast("Špatný PIN.");
+        }
+      }
+
+      function lockAdminNow() {
+        state.adminUnlocked = false;
+        applyAdminLock();
+        toast("Parametry zamčené.");
+      }
+
+      function removeAdminPin() {
+        if (!confirm("Zrušit PIN a nechat parametry volně přístupné?")) return;
+        state.settings.adminPinHash = "";
+        state.adminUnlocked = false;
+        writeJSON(settingsKey, state.settings);
+        applyAdminLock();
+        toast("PIN byl zrušen.");
+      }
+
+      function printSummary() {
+        const m = compute();
+        const rows = [
+          ["Řidič", m.driver || "—"],
+          ["Datum", formatDate(byId("date").value || todayISO())],
+          ["Typ směny", m.shiftLabel],
+          ["RZ vozidla", m.rz || "—"],
+          ["Najeté km", `${formatInt(m.kmReal)} km (účtováno ${formatInt(m.chargedKm)} km)`],
+          ["Tržba", money(m.trzba)],
+          ["Přístavné", money(m.pristavne)],
+          ["Náklady celkem", money(m.costs)],
+          ["Nehotovost (karta + faktura)", money(m.nonCash)],
+          ["Způsob odměny", m.payoutMode],
+          ["Výplata řidiče", money(m.vyplata)],
+          ["Doplatek na minimum", money(m.doplatek)],
+        ];
+        const totalLabel = m.companyOwes ? "Firma dorovnává řidiči" : "K odevzdání celkem";
+        const totalValue = money(m.companyOwes ? m.settlementAbs : m.settlement);
+        byId("printSheet").innerHTML = `
+          <div class="print-head">
+            <h1>RB TAXI Hodonín</h1>
+            <p>Výčetka řidiče</p>
+          </div>
+          <table class="print-table">
+            ${rows.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join("")}
+          </table>
+          <div class="print-total"><span>${escapeHtml(totalLabel)}</span><strong>${escapeHtml(totalValue)}</strong></div>
+          <p class="print-foot">Vytištěno ${escapeHtml(new Date().toLocaleString("cs-CZ"))} · verze ${escapeHtml(VERSION)}</p>
+        `;
+        window.print();
+      }
+
       function saveSettings() {
         const rzList = byId("setRzList").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
         state.settings = {
@@ -1396,12 +1572,14 @@
           driverId: byId("profDriverId").value.trim(),
           email: byId("profEmail").value.trim(),
           phone: byId("profPhone").value.trim(),
-          rzList: rzList.length ? rzList : defaultRz
+          rzList: rzList.length ? rzList : defaultRz,
+          adminPinHash: state.settings.adminPinHash || ""
         };
         writeJSON(settingsKey, state.settings);
         rebuildRzSelect(byId("rz").value);
         if (!byId("driver").value.trim()) byId("driver").value = state.settings.driverName;
         syncSettingsForm();
+        applyAdminLock();
         renderAll();
         toast("Nastavení je uložené.");
       }
@@ -1442,6 +1620,7 @@
             writeJSON(settingsKey, state.settings);
             rebuildRzSelect();
             syncSettingsForm();
+            applyAdminLock();
             renderAll();
             toast("Záloha byla načtena.");
           } catch {
@@ -1485,6 +1664,12 @@
         byId("saveShift").addEventListener("click", saveShift);
         byId("resetForm").addEventListener("click", resetForm);
         byId("copySummary").addEventListener("click", copySummary);
+        byId("printSummary").addEventListener("click", printSummary);
+        byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
+        byId("adminUnlock").addEventListener("click", unlockAdmin);
+        byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
+        byId("adminLockNow").addEventListener("click", lockAdminNow);
+        byId("adminRemovePin").addEventListener("click", removeAdminPin);
         byId("saveSettings").addEventListener("click", saveSettings);
         byId("clearData").addEventListener("click", clearData);
         byId("exportData").addEventListener("click", exportData);
