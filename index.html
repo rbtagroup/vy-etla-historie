@@ -614,6 +614,10 @@
       transition: transform .14s ease, color .14s ease, background .14s ease;
     }
     .nav-btn .icon { width: auto; height: auto; background: transparent; font-size: 17px; }
+    .nav-ico { display: grid; place-items: center; }
+    .nav-ico svg { width: 22px; height: 22px; display: block; }
+    main a { color: var(--gold); text-decoration: none; font-weight: 700; }
+    main a:hover { text-decoration: underline; }
     .nav-btn.active {
       color: var(--gold);
       background: rgba(215, 187, 112, .1);
@@ -646,7 +650,7 @@
       body { padding-bottom: 86px; }
       .shell { padding: 0 8px; }
       main { padding-top: 22px; }
-      .status-row .badge:first-child span:last-child { display: none; }
+      .status-row .badge:first-child { display: none; }
       .row { grid-template-columns: 1fr; gap: 8px; }
       .row input, .row select, .row textarea { text-align: left; }
       input[type="number"] { text-align: right; }
@@ -766,7 +770,6 @@
         <div>
           <div class="brand-kicker">RB TAXI Hodonín</div>
           <h1 id="pageTitle">Výčetka řidiče</h1>
-          <p class="version">VERZE 3.6.45-PREMIUM-POLISH</p>
         </div>
       </div>
       <div class="status-row">
@@ -836,7 +839,7 @@
           </div>
           <div class="grid-3">
             <div class="metric gold"><span>Účtované km</span><strong data-out="chargedKm">0</strong></div>
-            <div class="metric"><span>KM smluvní</span><strong data-out="invoiceKm">0</strong></div>
+            <div class="metric"><span>Smluvní km</span><strong data-out="invoiceKm">0</strong></div>
             <div class="metric"><span>Minimum tržby</span><strong data-out="minTrzba">0 Kč</strong></div>
           </div>
         </section>
@@ -894,6 +897,7 @@
               <input id="shkmCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
             </div>
           </div>
+          <p class="small">Smluvní jízdy (IAC / SHKM) se přepočítají na kilometry a odečtou z účtovaných km. Počet nech na 0, pokud jsi žádné takové jízdy neměl.</p>
         </section>
 
         <section class="section-stack" id="photoSection">
@@ -912,14 +916,14 @@
           </div>
           <div class="grid-2">
             <div class="metric green"><span>Výplata řidiče</span><strong data-out="vyplata">0 Kč</strong></div>
-            <div class="metric"><span>K odevzdání hotovost</span><strong data-out="kOdevzdani">0 Kč</strong></div>
+            <div class="metric"><span>Hotovost po výplatě</span><strong data-out="kOdevzdani">0 Kč</strong></div>
             <div class="metric"><span>Doplatek na minimum</span><strong data-out="doplatek">0 Kč</strong></div>
             <div class="metric"><span>Rozdíl hotovosti</span><strong data-out="cashDiff">-</strong></div>
           </div>
           <div class="detail-list">
             <div class="detail-line"><span>Náklady celkem</span><strong data-out="costs">0 Kč</strong></div>
-            <div class="detail-line"><span>Nehotovost celkem</span><strong data-out="nonCash">0 Kč</strong></div>
-            <div class="detail-line"><span>Má být u sebe vč. výplaty</span><strong data-out="cashExpected">0 Kč</strong></div>
+            <div class="detail-line"><span>Bezhotovostně (karta + faktura)</span><strong data-out="nonCash">0 Kč</strong></div>
+            <div class="detail-line"><span>U sebe vč. výplaty</span><strong data-out="cashExpected">0 Kč</strong></div>
           </div>
           <div class="notice" id="settlementNotice" style="display:none"></div>
           <div class="result-total">
@@ -951,7 +955,7 @@
           <div class="panel pad metric gold"><span>Výdělek řidiče</span><strong data-history="earnings">0 Kč</strong></div>
           <div class="panel pad metric"><span>Najeté km</span><strong data-history="km">0 km</strong></div>
         </section>
-        <button class="secondary-btn" id="exportCsv" type="button" style="width:100%">Exportovat do Excelu / CSV (pro účetnictví)</button>
+        <button class="secondary-btn" id="exportCsv" type="button" style="width:100%">Export do Excelu (CSV)</button>
         <section class="section-stack">
           <h2>Nedávné výčetky</h2>
           <div class="history-list" id="historyList"></div>
@@ -1059,7 +1063,7 @@
             <div class="row"><label class="row-label" for="profEmail"><span class="icon">@</span><span>Email</span></label><input id="profEmail" type="email" placeholder="jmeno@rbtaxi.cz"></div>
             <div class="row"><label class="row-label" for="profPhone"><span class="icon">T</span><span>Telefon</span></label><input id="profPhone" type="tel" placeholder="+420 000 000 000"></div>
           </div>
-          <p class="small">Tyto údaje se ukládají jen v tomto zařízení (localStorage), nikam se neodesílají.</p>
+          <p class="small">Tyto kontaktní údaje zůstávají jen v tomto telefonu. Přihlášení k firmě a odesílání výčetek řešíš výše v sekci Firemní účet.</p>
         </section>
  
         <section class="section-stack">
@@ -1077,15 +1081,6 @@
             <button class="secondary-btn photo-btn" id="carPhotoRemove" type="button">Odebrat</button>
           </div>
           <p class="small" data-photo="carHint">Foto se uloží k aktuálně vybranému vozidlu (RZ) v tomto zařízení.</p>
-        </section>
- 
-        <section class="section-stack">
-          <h3 class="label">Nastavení</h3>
-          <div class="panel rows">
-            <div class="row"><div class="row-label"><span class="icon">M</span><span>Tmavý režim</span></div><strong class="small">Vždy zapnuto</strong></div>
-            <div class="row"><div class="row-label"><span class="icon">J</span><span>Jazyk</span></div><strong>Čeština</strong></div>
-            <div class="row"><div class="row-label"><span class="icon">S</span><span>Uložené směny</span></div><strong data-profile="shifts">0</strong></div>
-          </div>
         </section>
  
         <section class="section-stack">
@@ -1133,10 +1128,10 @@
  
   <nav class="bottom-nav" aria-label="Hlavní navigace">
     <div class="bottom-nav-inner">
-      <button class="nav-btn active" data-nav="shift"><span class="icon">Σ</span><span>Směna</span></button>
-      <button class="nav-btn" data-nav="history"><span class="icon">H</span><span>Historie</span></button>
-      <button class="nav-btn" data-nav="stats"><span class="icon">G</span><span>Statistiky</span></button>
-      <button class="nav-btn" data-nav="account"><span class="icon">U</span><span>Účet</span></button>
+      <button class="nav-btn active" data-nav="shift"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/></svg></span><span>Směna</span></button>
+      <button class="nav-btn" data-nav="history"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>Historie</span></button>
+      <button class="nav-btn" data-nav="stats"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span>Statistiky</span></button>
+      <button class="nav-btn" data-nav="account"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span>Účet</span></button>
     </div>
   </nav>
  
@@ -1226,11 +1221,11 @@
         if (!Array.isArray(state.settings.rzList) || !state.settings.rzList.length) state.settings.rzList = defaultRz;
         state.shifts = readJSON(historyKey, []);
         rebuildRzSelect();
-        byId("date").value = todayISO();
         byId("driver").value = state.settings.driverName || "";
         restoreDraft();
+        byId("date").value = todayISO(); // datum vždy dnešní, ať se z draftu nezatáhne starý den
         syncSettingsForm();
-        applyAdminLock();
+        refreshParamUi();
       }
  
       function rebuildRzSelect(selected) {
@@ -1537,7 +1532,7 @@
         el('[data-stats="earnings"]').textContent = money(earnings);
         el('[data-stats="shifts"]').textContent = formatInt(shifts.length);
         el('[data-stats="avg"]').textContent = money(shifts.length ? earnings / shifts.length : 0);
-        el('[data-stats="trend"]').textContent = km ? `${formatInt(km)} km v období, settlement ${money(shifts.reduce((s, x) => s + x.settlement, 0))}` : "Zatím bez dat pro vybrané období";
+        el('[data-stats="trend"]').textContent = km ? `${formatInt(km)} km za období · k odevzdání ${money(shifts.reduce((s, x) => s + x.settlement, 0))}` : "Zatím bez dat pro vybrané období";
         el('[data-stats="range"]').textContent = state.statsPeriod === "day" ? "Dnes" : state.statsPeriod === "week" ? "Týden" : "Měsíc";
         renderChart(shifts);
         renderBestDays(shifts);
@@ -1592,16 +1587,26 @@
 
       function renderProfile() {
         const km = state.shifts.reduce((sum, shift) => sum + shift.kmReal, 0);
-        el('[data-profile="km"]').textContent = `${formatInt(km)} km`;
-        el('[data-profile="shifts"]').textContent = formatInt(state.shifts.length);
+        const kmEl = el('[data-profile="km"]'); if (kmEl) kmEl.textContent = `${formatInt(km)} km`;
+        const shiftsEl = el('[data-profile="shifts"]'); if (shiftsEl) shiftsEl.textContent = formatInt(state.shifts.length);
         el('[data-profile="activeRz"]').textContent = byId("rz").value || state.settings.rzList[0] || "—";
-        el('[data-profile="name"]').textContent = state.settings.driverName || "Řidič";
-        el('[data-profile="idLabel"]').textContent = state.settings.driverId ? `ID řidiče: ${state.settings.driverId}` : "ID řidiče: —";
+        const displayName = state.cloud.driver?.name || state.settings.driverName || "Řidič";
+        el('[data-profile="name"]').textContent = displayName;
+        const idText = state.cloud.driver?.login_code
+          ? `Přihlašovací kód: ${state.cloud.driver.login_code}${state.cloud.driver.is_admin ? " · admin" : ""}`
+          : (state.settings.driverId ? `ID řidiče: ${state.settings.driverId}` : "ID řidiče: —");
+        el('[data-profile="idLabel"]').textContent = idText;
         // Profilové foto
         const pImg = byId("profilePhotoImg");
         if (pImg) pImg.src = state.settings.profilePhoto || "icon-512.png";
+        const pRemove = byId("profilePhotoRemove");
+        if (pRemove) pRemove.style.display = state.settings.profilePhoto ? "" : "none";
         // Foto aktuálního vozidla (cloud → lokální → výchozí ikona)
         setCarPhoto(currentRz());
+        const carHint = el('[data-photo="carHint"]');
+        if (carHint) carHint.textContent = state.cloud.user
+          ? "Foto se uloží k vozidlu do firemního cloudu — uvidí ho všichni řidiči i vedení."
+          : "Foto se zatím uloží jen v telefonu. Po přihlášení do cloudu ho uvidí celá firma.";
       }
 
       function vehiclePublicUrl(rz) {
@@ -1763,6 +1768,62 @@
         show("adminRemovePin", hasPin && !locked);
       }
 
+      // Parametry ovlivňující výplatu (bez seznamu RZ, ten je jen lokální pomůcka).
+      const payParamIds = ["setComm", "setFull", "setHalf", "setMinKm", "setIacKm", "setShkmKm"];
+
+      // Rozhoduje o přístupu k parametrům: přihlášený → řídí je cloud (mění jen admin);
+      // nepřihlášený (offline) → původní lokální PIN zámek.
+      function refreshParamUi() {
+        const lockBar = document.querySelector(".admin-lock-bar");
+        const disclaimer = el('[data-admin="disclaimer"]');
+        if (!state.cloud.user) {
+          if (lockBar) lockBar.style.display = "";
+          applyAdminLock();
+          if (disclaimer) disclaimer.textContent = "PIN je jen brzda proti nechtěné změně parametrů, ne skutečné zabezpečení. Bez přihlášení žijí parametry jen v tomto telefonu.";
+          return;
+        }
+        const isAdmin = !!state.cloud.driver?.is_admin;
+        payParamIds.forEach((id) => { const node = byId(id); if (node) node.disabled = !isAdmin; });
+        if (lockBar) lockBar.style.display = "none";
+        const status = el('[data-admin="status"]');
+        if (status) status.textContent = isAdmin
+          ? "Firemní parametry — platí pro všechny řidiče."
+          : "Parametry nastavuje vedení firmy.";
+        if (disclaimer) disclaimer.textContent = isAdmin
+          ? "Změny se uloží na server a projeví se u všech řidičů. Výplata se navíc ověřuje na serveru."
+          : "Tyto hodnoty nastavuje vedení; tady je vidíš jen pro kontrolu. Výplatu počítá a ověřuje server.";
+      }
+
+      // Načte firemní parametry z cloudu (autoritativní zdroj pro přihlášené).
+      async function loadPayConfig() {
+        const sb = sbClient();
+        if (!sb || !state.cloud.user) return;
+        const { data } = await sb.from("pay_config").select("*").eq("id", 1).maybeSingle();
+        if (!data) return;
+        state.settings.commRate = Number(data.comm_rate);
+        state.settings.baseFull = Number(data.base_full);
+        state.settings.baseHalf = Number(data.base_half);
+        state.settings.minTrzbaPerKm = Number(data.min_trzba_per_km);
+        state.settings.iacKmPerRide = Number(data.iac_km_per_ride);
+        state.settings.shkmKmPerRide = Number(data.shkm_km_per_ride);
+        writeJSON(settingsKey, state.settings);
+        syncSettingsForm();
+      }
+
+      async function savePayConfig() {
+        const sb = sbClient();
+        if (!sb || !state.cloud.driver?.is_admin) return;
+        await sb.from("pay_config").update({
+          comm_rate: state.settings.commRate,
+          base_full: state.settings.baseFull,
+          base_half: state.settings.baseHalf,
+          min_trzba_per_km: state.settings.minTrzbaPerKm,
+          iac_km_per_ride: state.settings.iacKmPerRide,
+          shkm_km_per_ride: state.settings.shkmKmPerRide,
+          updated_at: new Date().toISOString()
+        }).eq("id", 1);
+      }
+
       async function setAdminPin(changing) {
         const pin = prompt(changing ? "Zadej nový PIN (min. 4 znaky):" : "Zadej PIN pro zámek parametrů (min. 4 znaky):");
         if (pin == null) return;
@@ -1838,7 +1899,7 @@
         window.print();
       }
 
-      function saveSettings() {
+      async function saveSettings() {
         const rzList = byId("setRzList").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
         state.settings = {
           commRate: clamp(num(byId("setComm").value), 1, 100),
@@ -1861,7 +1922,9 @@
         rebuildRzSelect(byId("rz").value);
         if (!byId("driver").value.trim()) byId("driver").value = state.settings.driverName;
         syncSettingsForm();
-        applyAdminLock();
+        // Admin: firemní parametry ulož i do cloudu (autoritativní pro všechny)
+        if (state.cloud.user && state.cloud.driver?.is_admin) await savePayConfig();
+        refreshParamUi();
         renderAll();
         toast("Nastavení je uložené.");
       }
@@ -1925,13 +1988,17 @@
         if (error) { toast("Export z cloudu selhal."); return; }
         if (!rows || !rows.length) { toast("V tomto období nejsou žádné výčetky."); return; }
         const names = new Map((drivers || []).map((d) => [d.id, d.name]));
+        // Peněžní sloupce bereme ze serveru (autoritativní), detaily (náklady…) z metrics.
         const flat = rows.map((r) => ({
           ...(r.metrics || {}),
           date: r.shift_date,
           driver: names.get(r.driver_id) || r.metrics?.driver || "",
           rz: r.rz,
+          trzba: r.trzba,
+          kmReal: r.km_real,
+          vyplata: r.vyplata,
           settlement: r.settlement,
-          settlementAbs: r.metrics?.settlementAbs ?? Math.abs(r.settlement || 0),
+          settlementAbs: Math.abs(r.settlement || 0),
           companyOwes: r.company_owes
         }));
         downloadCsv(buildCsv(flat), `rb-taxi-vsichni-ridici-${periodLabel(state.adminPeriod)}-${todayISO()}.csv`);
@@ -1974,7 +2041,7 @@
             writeJSON(settingsKey, state.settings);
             rebuildRzSelect();
             syncSettingsForm();
-            applyAdminLock();
+            refreshParamUi();
             renderAll();
             toast("Záloha byla načtena.");
           } catch {
@@ -2133,10 +2200,13 @@
           state.cloud.driver = drv || null;
           // Auto-předvyplnění jména řidiče do formuláře směny
           if (drv?.name && !byId("driver").value.trim()) byId("driver").value = drv.name;
+          await loadPayConfig(); // firemní parametry z cloudu (autoritativní)
         } else {
           state.cloud.driver = null;
         }
         updateCloudUI();
+        refreshParamUi();
+        renderProfile();
         renderAdmin();
       }
 
@@ -2162,6 +2232,9 @@
         state.cloud.user = null;
         state.cloud.driver = null;
         updateCloudUI();
+        refreshParamUi();
+        renderProfile();
+        renderAdmin();
         toast("Odhlášeno z cloudu.");
       }
 
