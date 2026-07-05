@@ -456,6 +456,15 @@
       background: linear-gradient(180deg, #f2d98b, var(--gold-2));
       box-shadow: 0 0 18px rgba(215, 187, 112, .22);
     }
+    .bar-wrap {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      height: 100%;
+      gap: 4px;
+    }
+    .bar-val { font-size: 9px; color: var(--gold); font-weight: 900; line-height: 1; }
  
     .profile-head {
       display: grid;
@@ -781,6 +790,7 @@
         <section class="panel pad hero">
           <h2>Výpočet směny</h2>
           <p class="muted">Vyplň směnu a jedním klikem vytvoř čistou výčetku.</p>
+          <p class="small" id="shiftCloudNudge" style="display:none;margin-top:8px">Nejsi přihlášený k firmě — výčetky zůstávají jen v telefonu. <a href="#" id="shiftCloudNudgeLink">Přihlásit se v Účtu</a></p>
         </section>
  
         <section class="section-stack">
@@ -1054,7 +1064,7 @@
         <section class="section-stack">
           <h3 class="label">Osobní údaje</h3>
           <div class="panel rows">
-            <div class="row"><label class="row-label" for="profDriverName"><span class="icon">O</span><span>Jméno</span></label><input id="profDriverName" type="text" placeholder="Jméno řidiče"></div>
+            <div class="row" id="profNameRow"><label class="row-label" for="profDriverName"><span class="icon">O</span><span>Jméno</span></label><input id="profDriverName" type="text" placeholder="Jméno řidiče"></div>
             <div class="row"><label class="row-label" for="profDriverId"><span class="icon">P</span><span>ID / číslo průkazu</span></label><input id="profDriverId" type="text" placeholder="např. CZ-000000"></div>
             <div class="row"><label class="row-label" for="profEmail"><span class="icon">@</span><span>Email</span></label><input id="profEmail" type="email" placeholder="jmeno@rbtaxi.cz"></div>
             <div class="row"><label class="row-label" for="profPhone"><span class="icon">T</span><span>Telefon</span></label><input id="profPhone" type="tel" placeholder="+420 000 000 000"></div>
@@ -1567,8 +1577,11 @@
         });
         const max = Math.max(1, ...buckets.map((bucket) => bucket.value));
         byId("chart").innerHTML = buckets.map((bucket) => {
-          const height = Math.max(8, Math.round((bucket.value / max) * 100));
-          return `<div class="bar-col" title="${money(bucket.value)}"><div class="bar ${bucket.value ? "hot" : ""}" style="height:${height}%"></div><span>${bucket.label}</span></div>`;
+          const height = Math.max(8, Math.round((bucket.value / max) * 82)); // strop 82 %, ať se vejde hodnota nad sloupec
+          const short = bucket.value >= 1000
+            ? `${(bucket.value / 1000).toFixed(bucket.value % 1000 ? 1 : 0).replace(".", ",")}k`
+            : `${Math.round(bucket.value)}`;
+          return `<div class="bar-col" title="${money(bucket.value)}"><div class="bar-wrap">${bucket.value ? `<span class="bar-val">${short}</span>` : ""}<div class="bar ${bucket.value ? "hot" : ""}" style="height:${height}%"></div></div><span>${bucket.label}</span></div>`;
         }).join("");
       }
  
@@ -1630,14 +1643,15 @@
         const cImg = byId("carPhotoImg");
         if (!cImg) return;
         const local = (state.settings.vehiclePhotos || {})[rz] || "";
+        const setRemove = (has) => { const b = byId("carPhotoRemove"); if (b) b.style.display = has ? "" : "none"; };
         const showLocalOrDefault = () => {
-          if (local) { cImg.src = local; cImg.classList.add("has-photo"); }
-          else { cImg.src = "icon-192.png"; cImg.classList.remove("has-photo"); }
+          if (local) { cImg.src = local; cImg.classList.add("has-photo"); setRemove(true); }
+          else { cImg.src = "icon-192.png"; cImg.classList.remove("has-photo"); setRemove(false); }
         };
         if (!rz) { showLocalOrDefault(); return; }
         const url = vehiclePublicUrl(rz);
         const probe = new Image();
-        probe.onload = () => { cImg.src = url; cImg.classList.add("has-photo"); };
+        probe.onload = () => { cImg.src = url; cImg.classList.add("has-photo"); setRemove(true); };
         probe.onerror = showLocalOrDefault;
         probe.src = url;
       }
@@ -1741,6 +1755,7 @@
         renderStats();
         renderProfile();
         updateReminder();
+        updateCloudNudge();
       }
 
       const reminderDismissKey = "rb-hybrid-reminder-dismissed-v1";
@@ -2189,6 +2204,15 @@
           const pending = pendingQueue().length;
           el('[data-cloud="syncInfo"]').textContent = pending ? `Čeká na odeslání: ${pending} výčetek.` : "Vše synchronizováno.";
         }
+        updateCloudNudge();
+      }
+
+      // Pobídka na Směně (nepřihlášený) + skrytí lokálního pole Jméno, když je řidič v cloudu.
+      function updateCloudNudge() {
+        const nudge = byId("shiftCloudNudge");
+        if (nudge) nudge.style.display = state.cloud.user ? "none" : "";
+        const nameRow = byId("profNameRow");
+        if (nameRow) nameRow.style.display = state.cloud.user ? "none" : "";
       }
 
       async function refreshCloudUser() {
@@ -2382,6 +2406,7 @@
         byId("carPhotoRemove").addEventListener("click", removeCarPhoto);
         byId("goSettings").addEventListener("click", () => showAccountSettings(true));
         byId("backToAccount").addEventListener("click", () => showAccountSettings(false));
+        byId("shiftCloudNudgeLink").addEventListener("click", (e) => { e.preventDefault(); navigate("account"); });
         byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
         byId("adminUnlock").addEventListener("click", unlockAdmin);
         byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
