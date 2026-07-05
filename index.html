@@ -203,19 +203,8 @@
       align-items: center;
       gap: 9px;
     }
-    .icon {
-      width: 27px;
-      height: 27px;
-      border-radius: 9px;
-      display: inline-grid;
-      place-items: center;
-      flex: 0 0 auto;
-      background: rgba(215, 187, 112, .11);
-      color: var(--gold);
-      font-size: 12px;
-      font-weight: 950;
-      line-height: 1;
-    }
+    /* Písmenkové "ikony" (Ř, O, Č…) skryty — labely jsou samy o sobě jasné a čistší. */
+    .icon { display: none; }
  
     .grid-3 {
       display: grid;
@@ -882,7 +871,7 @@
               <div class="input-unit"><input id="cashActual" type="number" min="0" inputmode="decimal" placeholder="volitelné"><span class="unit">Kč</span></div>
             </div>
           </div>
-          <div class="notice" id="cashNotice">Kontrola dýška se přeskočí, pokud pole necháš prázdné.</div>
+          <div class="notice" id="cashNotice">Kontrolu přebytku hotovosti (spropitné) přeskočíme, pokud pole necháš prázdné.</div>
         </section>
  
         <section class="section-stack">
@@ -997,6 +986,7 @@
  
     <section class="view" data-view="account">
       <div class="stack">
+        <div id="accountMain">
         <section class="profile-head">
           <img class="profile-logo" id="profilePhotoImg" src="icon-512.png" alt="Profilové foto">
           <div>
@@ -1040,6 +1030,12 @@
           </div>
         </section>
 
+        <button class="secondary-btn" id="goSettings" type="button" style="width:100%">Nastavení a správa →</button>
+        </div>
+
+        <div id="accountSettings" style="display:none">
+        <button class="secondary-btn" id="backToAccount" type="button" style="width:auto;padding:8px 14px;margin-bottom:4px">← Zpět na účet</button>
+
         <section class="section-stack" id="adminSection" style="display:none">
           <h3 class="label">Admin — přehled firmy</h3>
           <div class="filters">
@@ -1073,7 +1069,7 @@
             <div class="vehicle-info">
               <div><span>Aktuální vozidlo</span><strong data-profile="activeRz">—</strong></div>
               <div><span>Typ vozidla</span><strong>Taxi / osobní přeprava</strong></div>
-              <div><span>Najeto v aplikaci</span><strong data-profile="km">0 km</strong></div>
+              <div><span>Najeto celkem (v appce)</span><strong data-profile="km">0 km</strong></div>
             </div>
           </div>
           <div class="photo-actions">
@@ -1121,6 +1117,7 @@
           <button class="secondary-btn" id="importDataBtn" type="button">Obnovit ze zálohy</button>
           <input type="file" id="importDataFile" accept="application/json" style="display:none">
           <button class="danger-btn" id="clearData">Smazat uložené výčetky</button>
+        </div>
         </div>
       </div>
     </section>
@@ -1332,7 +1329,7 @@
         const notice = byId("cashNotice");
         notice.classList.remove("bad");
         if (!metrics.hasCashActual) {
-          notice.textContent = "Kontrola dýška se přeskočí, pokud pole necháš prázdné.";
+          notice.textContent = "Kontrolu přebytku hotovosti (spropitné) přeskočíme, pokud pole necháš prázdné.";
           return;
         }
         if (metrics.cashDiff === 0) {
@@ -1340,7 +1337,7 @@
           return;
         }
         if (metrics.cashDiff > 0) {
-          notice.textContent = `Dýško / přebytek: ${money(metrics.cashDiff)}. Výplatu ani částku k odevzdání to nemění.`;
+          notice.textContent = `Přebytek hotovosti (spropitné): ${money(metrics.cashDiff)}. Výplatu ani částku k odevzdání to nemění.`;
           return;
         }
         notice.classList.add("bad");
@@ -1467,9 +1464,23 @@
         });
       }
  
+      function showAccountSettings(show) {
+        const main = byId("accountMain");
+        const settings = byId("accountSettings");
+        if (!main || !settings) return;
+        main.style.display = show ? "none" : "";
+        settings.style.display = show ? "" : "none";
+        byId("pageTitle").textContent = show ? "Nastavení a správa" : titles.account;
+        window.scrollTo({ top: 0 });
+      }
+
       function navigate(view) {
         els(".view").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
         els(".nav-btn").forEach((node) => node.classList.toggle("active", node.dataset.nav === view));
+        // Účet vždy otevři na identitě (ne v nastavení); až pak nastav titulek dané záložky
+        const main = byId("accountMain");
+        const settings = byId("accountSettings");
+        if (main && settings) { main.style.display = ""; settings.style.display = "none"; }
         byId("pageTitle").textContent = titles[view];
         window.scrollTo({ top: 0, behavior: "smooth" });
         renderAll();
@@ -2369,6 +2380,8 @@
         byId("profilePhotoRemove").addEventListener("click", removeProfilePhoto);
         byId("carPhotoInput").addEventListener("change", (e) => { onCarPhoto(e.target.files[0]); e.target.value = ""; });
         byId("carPhotoRemove").addEventListener("click", removeCarPhoto);
+        byId("goSettings").addEventListener("click", () => showAccountSettings(true));
+        byId("backToAccount").addEventListener("click", () => showAccountSettings(false));
         byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
         byId("adminUnlock").addEventListener("click", unlockAdmin);
         byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
