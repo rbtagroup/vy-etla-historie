@@ -165,8 +165,10 @@
     main { padding-top: 24px; }
     .view { display: none; }
     .view.active { display: block; }
-    .stack { display: grid; gap: 24px; }
-    [data-view="shift"] .stack {
+    /* Jednotná šířka obsahu napříč záložkami (ať se karty na desktopu neroztahují) */
+    .stack {
+      display: grid;
+      gap: 24px;
       width: min(868px, 100%);
       margin: 0 auto;
     }
@@ -448,6 +450,7 @@
     }
     .bar {
       width: 100%;
+      max-width: 56px; /* strop, ať sloupce na desktopu nejsou obří desky */
       min-height: 8px;
       border-radius: 10px 10px 3px 3px;
       background: rgba(215, 187, 112, .16);
@@ -695,7 +698,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin: 14px 0 4px;
+      width: min(868px, 100%);
+      margin: 14px auto 4px;
       padding: 12px 16px;
       border-radius: 14px;
       background: rgba(214, 173, 96, .14);
