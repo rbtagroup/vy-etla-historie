@@ -1172,7 +1172,7 @@
         adminUnlocked: false,
         adminPeriod: "week",
         cloud: { client: null, user: null, driver: null },
-        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz, adminPinHash: "", profilePhoto: "", vehiclePhotos: {} }
+        settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz, adminPinHash: "", profilePhoto: "", vehiclePhotos: {}, vehiclePhotoV: {} }
       };
  
       const el = (selector, root = document) => root.querySelector(selector);
@@ -1600,13 +1600,39 @@
         // Profilové foto
         const pImg = byId("profilePhotoImg");
         if (pImg) pImg.src = state.settings.profilePhoto || "icon-512.png";
-        // Foto aktuálního vozidla
+        // Foto aktuálního vozidla (cloud → lokální → výchozí ikona)
+        setCarPhoto(currentRz());
+      }
+
+      function vehiclePublicUrl(rz) {
+        const ver = (state.settings.vehiclePhotoV || {})[rz];
+        return `${SUPABASE_URL}/storage/v1/object/public/vehicle-photos/${encodeURIComponent(rz)}/car.jpg${ver ? `?v=${ver}` : ""}`;
+      }
+
+      // Zkusí cloudové (firemní) foto vozidla, pak lokální, pak výchozí ikonu.
+      function setCarPhoto(rz) {
         const cImg = byId("carPhotoImg");
-        if (cImg) {
-          const carSrc = (state.settings.vehiclePhotos || {})[currentRz()] || "";
-          cImg.src = carSrc || "icon-192.png";
-          cImg.classList.toggle("has-photo", !!carSrc);
-        }
+        if (!cImg) return;
+        const local = (state.settings.vehiclePhotos || {})[rz] || "";
+        const showLocalOrDefault = () => {
+          if (local) { cImg.src = local; cImg.classList.add("has-photo"); }
+          else { cImg.src = "icon-192.png"; cImg.classList.remove("has-photo"); }
+        };
+        if (!rz) { showLocalOrDefault(); return; }
+        const url = vehiclePublicUrl(rz);
+        const probe = new Image();
+        probe.onload = () => { cImg.src = url; cImg.classList.add("has-photo"); };
+        probe.onerror = showLocalOrDefault;
+        probe.src = url;
+      }
+
+      function dataUrlToBlob(dataUrl) {
+        const [meta, b64] = dataUrl.split(",");
+        const mime = (meta.match(/:(.*?);/) || [])[1] || "image/jpeg";
+        const bin = atob(b64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: mime });
       }
 
       // Načte obrázek, zmenší na maxDim a vrátí JPEG data URL (šetří localStorage).
@@ -1656,18 +1682,38 @@
         const rz = currentRz();
         if (!rz) { toast("Nejdřív vyber vozidlo (RZ) na kartě Směna."); return; }
         try {
+          const dataUrl = await fileToDataUrl(file, 900);
           if (!state.settings.vehiclePhotos) state.settings.vehiclePhotos = {};
-          state.settings.vehiclePhotos[rz] = await fileToDataUrl(file, 900);
+          state.settings.vehiclePhotos[rz] = dataUrl;
+          // Firemní sdílení: nahraj do cloudu, ať ho vidí všichni řidiči i vedení
+          const sb = sbClient();
+          if (sb && state.cloud.user) {
+            const { error } = await sb.storage.from("vehicle-photos").upload(`${rz}/car.jpg`, dataUrlToBlob(dataUrl), { upsert: true, contentType: "image/jpeg" });
+            if (!error) {
+              if (!state.settings.vehiclePhotoV) state.settings.vehiclePhotoV = {};
+              state.settings.vehiclePhotoV[rz] = Date.now();
+              toast(`Foto vozidla ${rz} uložené a sdílené s firmou.`);
+            } else {
+              toast(`Foto ${rz} uložené v telefonu (do cloudu se nepodařilo nahrát).`);
+            }
+          } else {
+            toast(`Foto vozidla ${rz} uložené (přihlas se do cloudu pro sdílení s firmou).`);
+          }
           writeJSON(settingsKey, state.settings);
           renderProfile();
-          toast(`Foto vozidla ${rz} uložené.`);
         } catch { toast("Foto se nepodařilo načíst."); }
       }
 
-      function removeCarPhoto() {
+      async function removeCarPhoto() {
         const rz = currentRz();
-        if (!state.settings.vehiclePhotos || !state.settings.vehiclePhotos[rz]) { toast("K tomuto vozidlu není žádné foto."); return; }
-        delete state.settings.vehiclePhotos[rz];
+        const hasLocal = state.settings.vehiclePhotos && state.settings.vehiclePhotos[rz];
+        const sb = sbClient();
+        if (!hasLocal && !(sb && state.cloud.user)) { toast("K tomuto vozidlu není žádné foto."); return; }
+        if (state.settings.vehiclePhotos) delete state.settings.vehiclePhotos[rz];
+        if (state.settings.vehiclePhotoV) delete state.settings.vehiclePhotoV[rz];
+        if (sb && state.cloud.user) {
+          await sb.storage.from("vehicle-photos").remove([`${rz}/car.jpg`]);
+        }
         writeJSON(settingsKey, state.settings);
         renderProfile();
         toast(`Foto vozidla ${rz} odebráno.`);
@@ -1808,7 +1854,8 @@
           rzList: rzList.length ? rzList : defaultRz,
           adminPinHash: state.settings.adminPinHash || "",
           profilePhoto: state.settings.profilePhoto || "",
-          vehiclePhotos: state.settings.vehiclePhotos || {}
+          vehiclePhotos: state.settings.vehiclePhotos || {},
+          vehiclePhotoV: state.settings.vehiclePhotoV || {}
         };
         writeJSON(settingsKey, state.settings);
         rebuildRzSelect(byId("rz").value);
