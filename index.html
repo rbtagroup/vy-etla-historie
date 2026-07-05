@@ -1059,6 +1059,7 @@
             <h3 class="label">Řidiči</h3>
             <div class="panel pad" id="adminDrivers"><p class="small">—</p></div>
           </div>
+          <button class="secondary-btn" id="goAnalytics" type="button" style="width:100%;margin-top:12px">Podrobná analytika →</button>
         </section>
 
         <section class="section-stack">
@@ -1129,6 +1130,21 @@
           <button class="danger-btn" id="clearData">Smazat uložené výčetky</button>
         </div>
         </div>
+
+        <div id="accountAnalytics" style="display:none">
+        <button class="secondary-btn" id="backFromAnalytics" type="button" style="width:auto;padding:8px 14px;margin-bottom:4px">← Zpět na správu</button>
+        <div class="filters">
+          <button class="pill" data-anl-period="week">Týden</button>
+          <button class="pill active" data-anl-period="month">Měsíc</button>
+          <button class="pill" data-anl-period="all">Vše</button>
+        </div>
+        <div class="panel pad" id="anlHeadline"><p class="small">Načítám…</p></div>
+        <section class="section-stack"><h3 class="label">Tržba / km podle vozidla</h3><div class="panel pad" id="anlVehicles"><p class="small">—</p></div></section>
+        <section class="section-stack"><h3 class="label">Podle řidiče</h3><div class="panel pad" id="anlDrivers"><p class="small">—</p></div></section>
+        <section class="section-stack"><h3 class="label">Podle dne v týdnu</h3><div class="panel pad" id="anlWeekday"><p class="small">—</p></div></section>
+        <section class="section-stack"><h3 class="label">Náklady a anomálie</h3><div class="panel pad" id="anlCosts"><p class="small">—</p></div></section>
+        <p class="small">Pro účetnictví použij export do Excelu / CSV (v Nastavení nebo Historii). Přímé napojení na fakturační systém je samostatný krok.</p>
+        </div>
       </div>
     </section>
   </main>
@@ -1173,6 +1189,7 @@
         statsPeriod: "week",
         adminUnlocked: false,
         adminPeriod: "week",
+        analyticsPeriod: "month",
         cloud: { client: null, user: null, driver: null },
         settings: { commRate: 30, baseFull: 1000, baseHalf: 500, minTrzbaPerKm: 15, iacKmPerRide: 33, shkmKmPerRide: 7, driverName: "", driverId: "", email: "", phone: "", rzList: defaultRz, adminPinHash: "", profilePhoto: "", vehiclePhotos: {}, vehiclePhotoV: {} }
       };
@@ -1474,23 +1491,23 @@
         });
       }
  
-      function showAccountSettings(show) {
-        const main = byId("accountMain");
-        const settings = byId("accountSettings");
-        if (!main || !settings) return;
-        main.style.display = show ? "none" : "";
-        settings.style.display = show ? "" : "none";
-        byId("pageTitle").textContent = show ? "Nastavení a správa" : titles.account;
+      // Přepínání panelů uvnitř Účtu: identita / nastavení / analytika.
+      function accountPanel(which) {
+        const map = { main: "accountMain", settings: "accountSettings", analytics: "accountAnalytics" };
+        Object.entries(map).forEach(([key, id]) => { const node = byId(id); if (node) node.style.display = key === which ? "" : "none"; });
+        const titleMap = { main: titles.account, settings: "Nastavení a správa", analytics: "Analytika firmy" };
+        byId("pageTitle").textContent = titleMap[which];
         window.scrollTo({ top: 0 });
+        if (which === "analytics") renderAnalytics();
       }
 
       function navigate(view) {
         els(".view").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
         els(".nav-btn").forEach((node) => node.classList.toggle("active", node.dataset.nav === view));
-        // Účet vždy otevři na identitě (ne v nastavení); až pak nastav titulek dané záložky
-        const main = byId("accountMain");
-        const settings = byId("accountSettings");
-        if (main && settings) { main.style.display = ""; settings.style.display = "none"; }
+        // Účet vždy otevři na identitě; až pak nastav titulek dané záložky
+        ["accountSettings", "accountAnalytics"].forEach((id) => { const n = byId(id); if (n) n.style.display = "none"; });
+        const accMain = byId("accountMain");
+        if (accMain) accMain.style.display = "";
         byId("pageTitle").textContent = titles[view];
         window.scrollTo({ top: 0, behavior: "smooth" });
         renderAll();
@@ -2304,6 +2321,77 @@
         return d.toISOString().slice(0, 10);
       }
 
+      // Fáze 3 — analytika pro majitele (nad cloudovými daty, jen admin).
+      async function renderAnalytics() {
+        const sb = sbClient();
+        if (!sb || !state.cloud.driver?.is_admin) return;
+        const head = byId("anlHeadline");
+        const from = adminPeriodFrom(state.analyticsPeriod);
+        let query = sb.from("shifts").select("shift_date,rz,driver_id,trzba,km_real,vyplata,settlement,metrics");
+        if (from) query = query.gte("shift_date", from);
+        const [{ data: rows, error }, { data: drivers }] = await Promise.all([
+          query,
+          sb.from("drivers").select("id,name")
+        ]);
+        if (error) { head.innerHTML = '<p class="small">Nepodařilo se načíst data.</p>'; return; }
+        const shifts = rows || [];
+        const names = new Map((drivers || []).map((d) => [d.id, d.name]));
+        if (!shifts.length) {
+          head.innerHTML = '<p class="small">Za zvolené období zatím nejsou žádná data.</p>';
+          ["anlVehicles", "anlDrivers", "anlWeekday", "anlCosts"].forEach((id) => { byId(id).innerHTML = '<p class="small">—</p>'; });
+          return;
+        }
+        const costOf = (s) => (Number(s.metrics?.palivo) || 0) + (Number(s.metrics?.myti) || 0) + (Number(s.metrics?.jine) || 0);
+        const perKm = (t, k) => k > 0 ? t / k : 0;
+        const line = (label, main, sub) => `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:2px"><div style="display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(label)}</span><strong>${escapeHtml(main)}</strong></div>${sub ? `<div class="small">${escapeHtml(sub)}</div>` : ""}</div>`;
+
+        // Souhrn
+        const T = { trzba: 0, km: 0, vyplata: 0, costs: 0, count: shifts.length };
+        shifts.forEach((s) => { T.trzba += s.trzba || 0; T.km += s.km_real || 0; T.vyplata += s.vyplata || 0; T.costs += costOf(s); });
+        head.innerHTML = `<div class="detail-list">
+          <div class="detail-line"><span>Směn</span><strong>${formatInt(T.count)}</strong></div>
+          <div class="detail-line"><span>Tržba celkem</span><strong>${money(T.trzba)}</strong></div>
+          <div class="detail-line"><span>Tržba / km</span><strong>${money(perKm(T.trzba, T.km))}</strong></div>
+          <div class="detail-line"><span>Najeté km</span><strong>${formatInt(T.km)} km</strong></div>
+          <div class="detail-line"><span>Náklady (palivo + mytí + jiné)</span><strong>${money(T.costs)}</strong></div>
+        </div>`;
+
+        // Podle vozidla (řazeno dle tržba/km)
+        const veh = {};
+        shifts.forEach((s) => { const k = s.rz || "—"; (veh[k] ||= { trzba: 0, km: 0, n: 0 }); veh[k].trzba += s.trzba || 0; veh[k].km += s.km_real || 0; veh[k].n++; });
+        byId("anlVehicles").innerHTML = Object.entries(veh)
+          .sort((a, b) => perKm(b[1].trzba, b[1].km) - perKm(a[1].trzba, a[1].km))
+          .map(([rz, v]) => line(rz, `${money(perKm(v.trzba, v.km))}/km`, `${formatInt(v.n)} směn · ${money(v.trzba)} · ${formatInt(v.km)} km`)).join("");
+
+        // Podle řidiče (řazeno dle tržby)
+        const drv = {};
+        shifts.forEach((s) => { const k = s.driver_id; (drv[k] ||= { trzba: 0, km: 0, vyplata: 0, n: 0 }); drv[k].trzba += s.trzba || 0; drv[k].km += s.km_real || 0; drv[k].vyplata += s.vyplata || 0; drv[k].n++; });
+        byId("anlDrivers").innerHTML = Object.entries(drv)
+          .sort((a, b) => b[1].trzba - a[1].trzba)
+          .map(([id, v]) => line(names.get(id) || "—", money(v.trzba), `${formatInt(v.n)} směn · ${money(perKm(v.trzba, v.km))}/km · výplata ${money(v.vyplata)}`)).join("");
+
+        // Podle dne v týdnu (průměrná tržba)
+        const wd = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
+        const wsum = {};
+        shifts.forEach((s) => { const d = new Date(`${s.shift_date}T12:00:00`).getDay(); (wsum[d] ||= { trzba: 0, n: 0 }); wsum[d].trzba += s.trzba || 0; wsum[d].n++; });
+        byId("anlWeekday").innerHTML = [1, 2, 3, 4, 5, 6, 0].map((d) => {
+          const w = wsum[d] || { trzba: 0, n: 0 };
+          return line(wd[d], w.n ? `${money(w.trzba / w.n)} prům.` : "—", w.n ? `${formatInt(w.n)} směn · celkem ${money(w.trzba)}` : "bez směn");
+        }).join("");
+
+        // Náklady + anomálie (nejvyšší náklady ke kontrole)
+        const cP = shifts.reduce((a, s) => a + (Number(s.metrics?.palivo) || 0), 0);
+        const cM = shifts.reduce((a, s) => a + (Number(s.metrics?.myti) || 0), 0);
+        const cJ = shifts.reduce((a, s) => a + (Number(s.metrics?.jine) || 0), 0);
+        const topCost = shifts.map((s) => ({ s, c: costOf(s) })).filter((x) => x.c > 0).sort((a, b) => b.c - a.c).slice(0, 3);
+        byId("anlCosts").innerHTML = `<div class="detail-list">
+            <div class="detail-line"><span>Palivo</span><strong>${money(cP)}</strong></div>
+            <div class="detail-line"><span>Mytí</span><strong>${money(cM)}</strong></div>
+            <div class="detail-line"><span>Jiné</span><strong>${money(cJ)}</strong></div>
+          </div>
+          ${topCost.length ? `<p class="small" style="margin-top:8px">Nejvyšší náklady (ke kontrole):</p>` + topCost.map((x) => line(`${names.get(x.s.driver_id) || "—"} · ${x.s.rz || "—"}`, money(x.c), formatDate(x.s.shift_date))).join("") : '<p class="small" style="margin-top:8px">Žádné zadané náklady.</p>'}`;
+      }
+
       async function renderAdmin() {
         const sb = sbClient();
         const isAdmin = !!state.cloud.driver?.is_admin;
@@ -2404,8 +2492,15 @@
         byId("profilePhotoRemove").addEventListener("click", removeProfilePhoto);
         byId("carPhotoInput").addEventListener("change", (e) => { onCarPhoto(e.target.files[0]); e.target.value = ""; });
         byId("carPhotoRemove").addEventListener("click", removeCarPhoto);
-        byId("goSettings").addEventListener("click", () => showAccountSettings(true));
-        byId("backToAccount").addEventListener("click", () => showAccountSettings(false));
+        byId("goSettings").addEventListener("click", () => accountPanel("settings"));
+        byId("backToAccount").addEventListener("click", () => accountPanel("main"));
+        byId("goAnalytics").addEventListener("click", () => accountPanel("analytics"));
+        byId("backFromAnalytics").addEventListener("click", () => accountPanel("settings"));
+        els("[data-anl-period]").forEach((b) => b.addEventListener("click", () => {
+          state.analyticsPeriod = b.dataset.anlPeriod;
+          els("[data-anl-period]").forEach((x) => x.classList.toggle("active", x === b));
+          renderAnalytics();
+        }));
         byId("shiftCloudNudgeLink").addEventListener("click", (e) => { e.preventDefault(); navigate("account"); });
         byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
         byId("adminUnlock").addEventListener("click", unlockAdmin);
