@@ -1,8 +1,11 @@
 const CACHE_PREFIX = "rb-taxi-vycetka-";
 // Verze cache = verze appky + datum nasazení. Při každé změně bump tuto
 // konstantu, ať je invalidace cache explicitní (nespoléhá se jen na network-first).
-const CACHE_VERSION = "v3.16.0-2026-07-05-faze3";
+const CACHE_VERSION = "v3.17.0-2026-07-05-gate";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
+// Knihovna Supabase z CDN — kešujeme, ať přihlašovací brána funguje i offline
+// pro už přihlášeného řidiče (jinak by se offline nenačetla a nešlo by dovnitř).
+const SUPABASE_CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -23,7 +26,11 @@ const NETWORK_FIRST_ASSETS = new Set([
 ]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(caches.open(CACHE_NAME).then(async (cache) => {
+    await cache.addAll(APP_SHELL);
+    // CDN skript kešujeme best-effort (když selže, install kvůli tomu nespadne)
+    try { await cache.add(SUPABASE_CDN); } catch (e) { /* offline při instalaci */ }
+  }));
   self.skipWaiting();
 });
 
@@ -42,6 +49,26 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const requestUrl = new URL(event.request.url);
+
+  // Supabase CDN skript: cache-first (ať brána funguje offline)
+  if (requestUrl.hostname === "cdn.jsdelivr.net") {
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      try {
+        const response = await fetch(event.request);
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone());
+        }
+        return response;
+      } catch {
+        return caches.match(SUPABASE_CDN);
+      }
+    })());
+    return;
+  }
+
   if (requestUrl.origin !== self.location.origin) return;
 
   const shouldUseNetworkFirst =

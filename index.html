@@ -614,8 +614,8 @@
     .nav-btn .icon { width: auto; height: auto; background: transparent; font-size: 17px; }
     .nav-ico { display: grid; place-items: center; }
     .nav-ico svg { width: 22px; height: 22px; display: block; }
-    main a { color: var(--gold); text-decoration: none; font-weight: 700; }
-    main a:hover { text-decoration: underline; }
+    main a, .auth-card a { color: var(--gold); text-decoration: none; font-weight: 700; }
+    main a:hover, .auth-card a:hover { text-decoration: underline; }
     .nav-btn.active {
       color: var(--gold);
       background: rgba(215, 187, 112, .1);
@@ -722,6 +722,33 @@
       opacity: .7;
     }
 
+    /* Přihlašovací brána (login wall) */
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(circle at 50% 0%, #101a30, var(--bg) 70%);
+      overflow-y: auto;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 28px 22px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .auth-logo { width: 84px; height: 84px; border-radius: 999px; box-shadow: 0 0 24px rgba(215, 187, 112, .3); }
+    .auth-kicker { color: var(--gold); font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; margin-top: 12px; }
+    .auth-title { font-size: 26px; margin: 4px 0 20px; }
+    .auth-card .row { text-align: left; }
+
     /* Tisk / uložení do PDF */
     #printSheet { display: none; }
     @media print {
@@ -761,6 +788,29 @@
   </style>
 </head>
 <body>
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <img class="auth-logo" src="icon-512.png" alt="RB TAXI">
+      <div class="auth-kicker">RB TAXI Hodonín</div>
+      <h1 class="auth-title">Výčetka řidiče</h1>
+      <div id="cloudLoginForm">
+        <div class="row"><label class="row-label" for="cloudCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="cloudCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak"></div>
+        <div class="row"><label class="row-label" for="cloudPin"><span class="icon">*</span><span>PIN</span></label><input id="cloudPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN"></div>
+        <button class="primary-btn" id="cloudLogin" type="button" style="width:100%;margin-top:12px">Přihlásit se</button>
+        <p class="small" style="text-align:center;margin-top:10px">Nemáš účet? <a href="#" id="cloudShowRegister">Zaregistruj se</a></p>
+      </div>
+      <div id="cloudRegisterForm" style="display:none">
+        <div class="row"><label class="row-label" for="regName"><span class="icon">O</span><span>Jméno</span></label><input id="regName" type="text" autocomplete="name" placeholder="Jméno řidiče"></div>
+        <div class="row"><label class="row-label" for="regCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="regCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak (bez mezer a diakritiky)"></div>
+        <div class="row"><label class="row-label" for="regPin"><span class="icon">*</span><span>PIN (min. 6 znaků)</span></label><input id="regPin" type="password" inputmode="numeric" autocomplete="new-password" placeholder="zvol si PIN (aspoň 6 znaků)"></div>
+        <div class="row"><label class="row-label" for="regInvite"><span class="icon">K</span><span>Zvací kód</span></label><input id="regInvite" type="text" autocapitalize="characters" placeholder="firemní zvací kód"></div>
+        <button class="primary-btn" id="cloudRegister" type="button" style="width:100%;margin-top:12px">Vytvořit účet</button>
+        <p class="small" style="text-align:center;margin-top:10px">Už máš účet? <a href="#" id="cloudShowLogin">Přihlas se</a></p>
+      </div>
+      <p class="small" data-cloud="status" style="text-align:center;margin-top:14px">Pro vstup do aplikace se přihlas nebo si vytvoř účet. Zvací kód dostaneš od vedení firmy.</p>
+    </div>
+  </div>
+
   <header class="topbar">
     <div class="shell topbar-inner">
       <div class="brand">
@@ -1013,24 +1063,7 @@
         <section class="section-stack">
           <h3 class="label">Firemní účet (cloud)</h3>
           <div class="panel pad">
-            <div id="cloudLoggedOut">
-              <div id="cloudLoginForm">
-                <div class="row"><label class="row-label" for="cloudCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="cloudCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak"></div>
-                <div class="row"><label class="row-label" for="cloudPin"><span class="icon">*</span><span>PIN</span></label><input id="cloudPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN"></div>
-                <button class="primary-btn" id="cloudLogin" type="button" style="width:100%;margin-top:10px">Přihlásit se do cloudu</button>
-                <p class="small">Nemáš účet? <a href="#" id="cloudShowRegister">Zaregistruj se</a></p>
-              </div>
-              <div id="cloudRegisterForm" style="display:none">
-                <div class="row"><label class="row-label" for="regName"><span class="icon">O</span><span>Jméno</span></label><input id="regName" type="text" autocomplete="name" placeholder="Jméno řidiče"></div>
-                <div class="row"><label class="row-label" for="regCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="regCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak (bez mezer a diakritiky)"></div>
-                <div class="row"><label class="row-label" for="regPin"><span class="icon">*</span><span>PIN (min. 6 znaků)</span></label><input id="regPin" type="password" inputmode="numeric" autocomplete="new-password" placeholder="zvol si PIN (aspoň 6 znaků)"></div>
-                <div class="row"><label class="row-label" for="regInvite"><span class="icon">K</span><span>Zvací kód</span></label><input id="regInvite" type="text" autocapitalize="characters" placeholder="firemní zvací kód"></div>
-                <button class="primary-btn" id="cloudRegister" type="button" style="width:100%;margin-top:10px">Vytvořit účet</button>
-                <p class="small">Už máš účet? <a href="#" id="cloudShowLogin">Přihlas se</a></p>
-              </div>
-              <p class="small" data-cloud="status">Nepřihlášen — appka funguje i bez cloudu, data zůstávají v telefonu. Po přihlášení se výčetky navíc zálohují na firemní server a vidí je vedení.</p>
-            </div>
-            <div id="cloudLoggedIn" style="display:none">
+            <div id="cloudLoggedIn">
               <p class="small"><strong data-cloud="who">—</strong></p>
               <p class="small" data-cloud="syncInfo">—</p>
               <button class="secondary-btn" id="cloudUpload" type="button" style="width:100%">Nahrát historii z telefonu do cloudu</button>
@@ -2213,8 +2246,8 @@
 
       function updateCloudUI() {
         const loggedIn = !!state.cloud.user;
-        byId("cloudLoggedOut").style.display = loggedIn ? "none" : "";
-        byId("cloudLoggedIn").style.display = loggedIn ? "" : "none";
+        const li = byId("cloudLoggedIn");
+        if (li) li.style.display = loggedIn ? "" : "none";
         if (loggedIn) {
           const d = state.cloud.driver;
           el('[data-cloud="who"]').textContent = `Přihlášen: ${d?.name || state.cloud.user.email}${d?.is_admin ? " (admin)" : ""}`;
@@ -2222,6 +2255,13 @@
           el('[data-cloud="syncInfo"]').textContent = pending ? `Čeká na odeslání: ${pending} výčetek.` : "Vše synchronizováno.";
         }
         updateCloudNudge();
+        updateAuthGate();
+      }
+
+      // Přihlašovací brána: dokud řidič není přihlášený, appka je schovaná.
+      function updateAuthGate() {
+        const gate = byId("authGate");
+        if (gate) gate.style.display = state.cloud.user ? "none" : "flex";
       }
 
       // Pobídka na Směně (nepřihlášený) + skrytí lokálního pole Jméno, když je řidič v cloudu.
@@ -2235,8 +2275,9 @@
       async function refreshCloudUser() {
         const sb = sbClient();
         if (!sb) { updateCloudUI(); return; }
-        const { data } = await sb.auth.getUser();
-        const user = data?.user || null;
+        // getSession čte session z úložiště (funguje i offline pro už přihlášeného řidiče)
+        const { data } = await sb.auth.getSession();
+        const user = data?.session?.user || null;
         state.cloud.user = user;
         if (user) {
           const { data: drv } = await sb.from("drivers").select("name,is_admin,login_code,active").eq("id", user.id).maybeSingle();
