@@ -667,6 +667,39 @@
       cursor: not-allowed;
     }
 
+    /* Připomínka vyplnit výčetku */
+    .reminder-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 14px 0 4px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: rgba(214, 173, 96, .14);
+      border: 1px solid rgba(214, 173, 96, .4);
+      color: var(--text, #f4f6fb);
+      font-size: 14px;
+    }
+    .reminder-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .reminder-bar #reminderFill {
+      border: 0;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-weight: 600;
+      background: var(--gold, #d6ad60);
+      color: #1a1204;
+      cursor: pointer;
+    }
+    .reminder-bar #reminderDismiss {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 16px;
+      cursor: pointer;
+      opacity: .7;
+    }
+
     /* Tisk / uložení do PDF */
     #printSheet { display: none; }
     @media print {
@@ -724,6 +757,13 @@
   </header>
  
   <main class="shell">
+    <div id="reminderBar" class="reminder-bar" style="display:none">
+      <span>Nezapomeň dnes vyplnit výčetku směny.</span>
+      <div class="reminder-actions">
+        <button type="button" id="reminderFill">Vyplnit</button>
+        <button type="button" id="reminderDismiss" aria-label="Skrýt">✕</button>
+      </div>
+    </div>
     <section class="view active" data-view="shift">
       <div class="stack">
         <section class="panel pad hero">
@@ -1531,6 +1571,18 @@
         renderHistory();
         renderStats();
         renderProfile();
+        updateReminder();
+      }
+
+      const reminderDismissKey = "rb-hybrid-reminder-dismissed-v1";
+      function hasTodayShift() {
+        return state.shifts.some((s) => s.date === todayISO());
+      }
+      function updateReminder() {
+        const bar = byId("reminderBar");
+        if (!bar) return;
+        const dismissedToday = readJSON(reminderDismissKey, "") === todayISO();
+        bar.style.display = (!hasTodayShift() && !dismissedToday) ? "" : "none";
       }
  
       const adminParamIds = ["setComm", "setFull", "setHalf", "setMinKm", "setIacKm", "setShkmKm", "setRzList"];
@@ -2082,6 +2134,8 @@
         byId("copySummary").addEventListener("click", copySummary);
         byId("printSummary").addEventListener("click", printSummary);
         byId("exportCsv").addEventListener("click", exportCsv);
+        byId("reminderFill").addEventListener("click", () => navigate("shift"));
+        byId("reminderDismiss").addEventListener("click", () => { writeJSON(reminderDismissKey, todayISO()); updateReminder(); });
         byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
         byId("adminUnlock").addEventListener("click", unlockAdmin);
         byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
