@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.47">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.48">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
@@ -275,6 +275,11 @@
       line-height: 1;
       letter-spacing: .08em;
       text-transform: uppercase;
+    }
+    .required-tag {
+      border-color: rgba(34, 230, 194, .24);
+      background: rgba(34, 230, 194, .08);
+      color: #c8fff6;
     }
     .optional-chevron {
       width: 28px;
@@ -1084,19 +1089,18 @@
           </div>
         </details>
 
-        <details class="section-stack optional-section" id="photoSection">
-          <summary class="section-title">
-            <span class="section-heading"><span class="icon">F</span><h3 class="label">Fotky</h3></span>
-            <span class="optional-meta"><span class="optional-tag">Volitelné</span><span class="optional-chevron" aria-hidden="true">⌄</span></span>
-          </summary>
-          <div class="optional-body">
-            <div class="panel rows">
-              <div class="row"><label class="row-label" for="photoTacho"><span class="icon">T</span><span>Foto tachometru</span></label><input id="photoTacho" type="file" accept="image/*" capture="environment"></div>
-              <div class="row"><label class="row-label" for="photoReceipt"><span class="icon">Ú</span><span>Foto účtenky</span></label><input id="photoReceipt" type="file" accept="image/*" capture="environment"></div>
-            </div>
-            <p class="small" data-photo="hint">Fotky se uloží k výčetce ve firemním cloudu a slouží jako audit stopa při případném sporu.</p>
+        <section class="section-stack" id="photoSection">
+          <div class="section-title">
+            <span class="section-heading"><span class="icon">F</span><h3 class="label">Fotky tachometru</h3></span>
+            <span class="optional-meta"><span class="optional-tag required-tag">Povinné</span></span>
           </div>
-        </details>
+          <div class="panel rows">
+            <div class="row"><label class="row-label" for="photoTachoStart"><span class="icon">Z</span><span>Tachometr na začátku směny</span></label><input id="photoTachoStart" type="file" accept="image/*" capture="environment" required aria-required="true"></div>
+            <div class="row"><label class="row-label" for="photoTachoEnd"><span class="icon">K</span><span>Tachometr na konci směny</span></label><input id="photoTachoEnd" type="file" accept="image/*" capture="environment" required aria-required="true"></div>
+            <div class="row"><label class="row-label" for="photoReceipt"><span class="icon">Ú</span><span>Foto účtenky</span></label><input id="photoReceipt" type="file" accept="image/*" capture="environment"></div>
+          </div>
+          <p class="small" data-photo="hint">Začátek a konec tachometru jsou povinné. Účtenku přidej jen tehdy, když ji máš.</p>
+        </section>
 
         <section class="panel pad result" id="resultCard">
           <div>
@@ -1341,7 +1345,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.47";
+      const VERSION = "hybrid-3.6.48";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
@@ -1585,6 +1589,7 @@
         }
         const field = error.field ? byId(error.field) : null;
         if (field) {
+          field.closest("details")?.setAttribute("open", "");
           const row = field.closest(".row");
           const id = `${field.id}Error`;
           field.classList.add("is-invalid");
@@ -1619,6 +1624,8 @@
         if (!Number.isInteger(values.iacCount)) return { field: "iacCount", message: "IAC musí být celé číslo." };
         if (!Number.isInteger(values.shkmCount)) return { field: "shkmCount", message: "SHKM musí být celé číslo." };
         if (metrics.invoiceKm > metrics.kmReal) return { field: "iacCount", message: `Smluvní km (${formatInt(metrics.invoiceKm)}) jsou vyšší než najeté km (${formatInt(metrics.kmReal)}).` };
+        if (!byId("photoTachoStart").files[0]) return { field: "photoTachoStart", message: "Nahraj fotku tachometru na začátku směny." };
+        if (!byId("photoTachoEnd").files[0]) return { field: "photoTachoEnd", message: "Nahraj fotku tachometru na konci směny." };
         return null;
       }
  
@@ -1666,6 +1673,18 @@
           toast("Kopírování se nepodařilo — zkopíruj ručně.");
         }
       }
+
+      function photoLinks(shift) {
+        const metrics = shift.metrics || {};
+        const tachoStart = shift.photo_tacho_start || metrics.photo_tacho_start || shift.photo_tacho || metrics.photo_tacho || "";
+        const tachoEnd = shift.photo_tacho_end || metrics.photo_tacho_end || "";
+        const receipt = shift.photo_receipt || metrics.photo_receipt || "";
+        const links = [];
+        if (tachoStart) links.push(`<a href="#" data-photo-path="${escapeHtml(tachoStart)}">${tachoEnd ? "tachometr začátek" : "tachometr"}</a>`);
+        if (tachoEnd) links.push(`<a href="#" data-photo-path="${escapeHtml(tachoEnd)}">tachometr konec</a>`);
+        if (receipt) links.push(`<a href="#" data-photo-path="${escapeHtml(receipt)}">účtenka</a>`);
+        return links.join(" · ");
+      }
  
       async function saveShift() {
         if (!state.cloud.user) {
@@ -1675,17 +1694,22 @@
         }
         const shift = createShift();
         if (!shift) return;
-        const hasPhotos = byId("photoTacho").files[0] || byId("photoReceipt").files[0];
-        if (state.cloud.user && hasPhotos) {
-          toast("Nahrávám fotky…");
-          Object.assign(shift, await uploadShiftPhotos(shift.id));
+        if (state.cloud.user) {
+          toast("Nahrávám povinné fotky…");
+          try {
+            Object.assign(shift, await uploadShiftPhotos(shift.id));
+          } catch (error) {
+            showValidationError({ field: error.field || "", message: error.message || "Povinné fotky se nepodařilo nahrát." });
+            return;
+          }
         }
         state.shifts.unshift(shift);
         writeJSON(historyKey, state.shifts);
         clearDraft();
         enqueueRows([shiftToRow(shift)]);
         syncPending();
-        byId("photoTacho").value = "";
+        byId("photoTachoStart").value = "";
+        byId("photoTachoEnd").value = "";
         byId("photoReceipt").value = "";
         renderAll();
         navigate("history");
@@ -1793,7 +1817,7 @@
               <div class="small">${formatInt(shift.kmReal)} km · účtováno ${formatInt(shift.chargedKm)} km · ${escapeHtml(shift.payoutMode)}</div>
               <div class="small">${shift.companyOwes ? `Firma dorovnává řidiči: <strong>${money(shift.settlementAbs)}</strong>` : `K odevzdání celkem: <strong>${money(shift.settlement)}</strong>`}</div>
             </div>
-            ${(shift.photo_tacho || shift.photo_receipt) ? `<div class="small" style="margin-top:6px">Fotky: ${shift.photo_tacho ? `<a href="#" data-photo-path="${escapeHtml(shift.photo_tacho)}">tachometr</a>` : ""}${(shift.photo_tacho && shift.photo_receipt) ? " · " : ""}${shift.photo_receipt ? `<a href="#" data-photo-path="${escapeHtml(shift.photo_receipt)}">účtenka</a>` : ""}</div>` : ""}
+            ${photoLinks(shift) ? `<div class="small" style="margin-top:6px">Fotky: ${photoLinks(shift)}</div>` : ""}
           </article>
         `).join("");
       }
@@ -2396,9 +2420,15 @@
           vyplata: Math.round(shift.vyplata || 0),
           settlement: Math.round(shift.settlement || 0),
           company_owes: !!shift.companyOwes,
-          photo_tacho: shift.photo_tacho || null,
+          photo_tacho: shift.photo_tacho_start || shift.photo_tacho || null,
           photo_receipt: shift.photo_receipt || null
         };
+      }
+
+      function requiredPhotoError(field, message) {
+        const error = new Error(message);
+        error.field = field;
+        return error;
       }
 
       async function uploadShiftPhotos(shiftId) {
@@ -2406,14 +2436,28 @@
         const paths = {};
         if (!sb || !state.cloud.user) return paths;
         const uid = state.cloud.user.id;
-        const inputs = [["photoTacho", "tacho", "photo_tacho"], ["photoReceipt", "receipt", "photo_receipt"]];
-        for (const [inputId, kind, col] of inputs) {
+        const inputs = [
+          { inputId: "photoTachoStart", kind: "tacho-start", col: "photo_tacho_start", required: true, message: "Fotka tachometru na začátku směny se nepodařila nahrát." },
+          { inputId: "photoTachoEnd", kind: "tacho-end", col: "photo_tacho_end", required: true, message: "Fotka tachometru na konci směny se nepodařila nahrát." },
+          { inputId: "photoReceipt", kind: "receipt", col: "photo_receipt", required: false, message: "Fotku účtenky se nepodařilo nahrát." }
+        ];
+        for (const item of inputs) {
+          const { inputId, kind, col, required, message } = item;
           const file = byId(inputId).files[0];
-          if (!file) continue;
+          if (!file) {
+            if (required) throw requiredPhotoError(inputId, message);
+            continue;
+          }
           const ext = ((file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "")) || "jpg";
           const path = `${uid}/${shiftId}/${kind}.${ext}`;
           const { error } = await sb.storage.from("shift-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
-          if (!error) paths[col] = path;
+          if (error) {
+            if (required) throw requiredPhotoError(inputId, message);
+            toast(message);
+            continue;
+          }
+          paths[col] = path;
+          if (col === "photo_tacho_start") paths.photo_tacho = path;
         }
         return paths;
       }
@@ -2685,7 +2729,7 @@
         byId("adminSection").style.display = isAdmin ? "" : "none";
         if (!sb || !isAdmin) return;
         const from = adminPeriodFrom(state.adminPeriod);
-        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,km_real,shift_date,rz,photo_tacho,photo_receipt,created_at").order("created_at", { ascending: false });
+        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,km_real,shift_date,rz,photo_tacho,photo_receipt,metrics,created_at").order("created_at", { ascending: false });
         if (from) query = query.gte("shift_date", from);
         const [{ data: shifts, error }, { data: drivers }] = await Promise.all([
           query,
@@ -2727,10 +2771,7 @@
         // Poslední výčetky napříč řidiči + odkazy na fotky (tachometr / účtenka)
         const names = new Map((drivers || []).map((d) => [d.id, d.name]));
         const recent = rows.slice(0, 15).map((s) => {
-          const photos = [
-            s.photo_tacho ? `<a href="#" data-photo-path="${escapeHtml(s.photo_tacho)}">tachometr</a>` : "",
-            s.photo_receipt ? `<a href="#" data-photo-path="${escapeHtml(s.photo_receipt)}">účtenka</a>` : ""
-          ].filter(Boolean).join(" · ");
+          const photos = photoLinks(s);
           return `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:2px">
             <div style="display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")}</span><strong>${money(s.trzba)}</strong></div>
             <div class="small">${photos ? `Fotky: ${photos}` : "Bez fotek"}</div>
