@@ -168,7 +168,7 @@
       box-shadow: 0 0 14px rgba(0, 245, 160, .86);
     }
  
-    main { padding-top: 24px; }
+    main.shell { padding-top: 24px; } /* main.shell, ať to nepřebije shorthand .shell { padding: 0 20px } */
     .view { display: none; }
     .view.active { display: block; }
     /* Jednotná šířka obsahu napříč záložkami (ať se karty na desktopu neroztahují) */
@@ -362,6 +362,7 @@
       display: flex;
       gap: 10px;
       overflow-x: auto;
+      margin-top: 10px; /* ať piluly nejsou nalepené pod hlavičkou / předchozím prvkem */
       padding-bottom: 2px;
     }
     .pill {
@@ -657,7 +658,7 @@
     @media (max-width: 760px) {
       body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
       .shell { padding: 0 14px; }
-      main { padding-top: 22px; }
+      main.shell { padding-top: 22px; }
       .status-row .badge:first-child { display: none; }
       .row { grid-template-columns: 1fr; gap: 8px; }
       .row input, .row select, .row textarea { text-align: left; }
