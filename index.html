@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.46">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.47">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
@@ -233,6 +233,64 @@
       display: flex;
       align-items: center;
       gap: 9px;
+    }
+    .optional-section {
+      border-top: 1px solid var(--line-soft);
+      padding-top: 12px;
+    }
+    .optional-section > summary {
+      cursor: pointer;
+      list-style: none;
+      min-height: 44px;
+      border-radius: 12px;
+      padding: 0 2px;
+    }
+    .optional-section > summary::-webkit-details-marker { display: none; }
+    .optional-section > summary:focus-visible {
+      outline: 2px solid rgba(215, 187, 112, .72);
+      outline-offset: 4px;
+    }
+    .optional-section .section-title {
+      justify-content: space-between;
+    }
+    .section-heading {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+    .optional-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .optional-tag {
+      border: 1px solid rgba(215, 187, 112, .18);
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .optional-chevron {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--gold);
+      transition: transform .16s ease;
+    }
+    .optional-section[open] .optional-chevron { transform: rotate(180deg); }
+    .optional-body {
+      display: grid;
+      gap: 12px;
+      padding-top: 12px;
     }
     /* Písmenkové "ikony" (Ř, O, Č…) skryty — labely jsou samy o sobě jasné a čistší. */
     .icon { display: none; }
@@ -990,40 +1048,55 @@
           </div>
         </section>
  
-        <section class="section-stack">
-          <div class="section-title"><span class="icon">H</span><h3 class="label">Kontrola hotovosti</h3></div>
-          <div class="panel rows">
-            <div class="row">
-              <label class="row-label" for="cashActual"><span class="icon">C</span><span>Celá hotovost u sebe</span></label>
-              <div class="input-unit"><input id="cashActual" type="number" min="0" inputmode="decimal" placeholder="volitelné"><span class="unit">Kč</span></div>
+        <details class="section-stack optional-section">
+          <summary class="section-title">
+            <span class="section-heading"><span class="icon">H</span><h3 class="label">Kontrola hotovosti</h3></span>
+            <span class="optional-meta"><span class="optional-tag">Volitelné</span><span class="optional-chevron" aria-hidden="true">⌄</span></span>
+          </summary>
+          <div class="optional-body">
+            <div class="panel rows">
+              <div class="row">
+                <label class="row-label" for="cashActual"><span class="icon">C</span><span>Celá hotovost u sebe</span></label>
+                <div class="input-unit"><input id="cashActual" type="number" min="0" inputmode="decimal" placeholder="volitelné"><span class="unit">Kč</span></div>
+              </div>
             </div>
+            <div class="notice" id="cashNotice">Kontrolu přebytku hotovosti (spropitné) přeskočíme, pokud pole necháš prázdné.</div>
           </div>
-          <div class="notice" id="cashNotice">Kontrolu přebytku hotovosti (spropitné) přeskočíme, pokud pole necháš prázdné.</div>
-        </section>
- 
-        <section class="section-stack">
-          <div class="section-title"><span class="icon">S</span><h3 class="label">Smluvní jízdy</h3></div>
-          <div class="panel rows">
-            <div class="row">
-              <label class="row-label" for="iacCount"><span class="icon">I</span><span>IAC (počet jízd)</span></label>
-              <input id="iacCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
-            </div>
-            <div class="row">
-              <label class="row-label" for="shkmCount"><span class="icon">S</span><span>SHKM (počet jízd)</span></label>
-              <input id="shkmCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
-            </div>
-          </div>
-          <p class="small">Smluvní jízdy (IAC / SHKM) se přepočítají na kilometry a odečtou z účtovaných km. Počet nech na 0, pokud jsi žádné takové jízdy neměl.</p>
-        </section>
+        </details>
 
-        <section class="section-stack" id="photoSection">
-          <div class="section-title"><span class="icon">F</span><h3 class="label">Fotky (volitelné)</h3></div>
-          <div class="panel rows">
-            <div class="row"><label class="row-label" for="photoTacho"><span class="icon">T</span><span>Foto tachometru</span></label><input id="photoTacho" type="file" accept="image/*" capture="environment"></div>
-            <div class="row"><label class="row-label" for="photoReceipt"><span class="icon">Ú</span><span>Foto účtenky</span></label><input id="photoReceipt" type="file" accept="image/*" capture="environment"></div>
+        <details class="section-stack optional-section">
+          <summary class="section-title">
+            <span class="section-heading"><span class="icon">S</span><h3 class="label">Smluvní jízdy</h3></span>
+            <span class="optional-meta"><span class="optional-tag">Volitelné</span><span class="optional-chevron" aria-hidden="true">⌄</span></span>
+          </summary>
+          <div class="optional-body">
+            <div class="panel rows">
+              <div class="row">
+                <label class="row-label" for="iacCount"><span class="icon">I</span><span>IAC (počet jízd)</span></label>
+                <input id="iacCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+              </div>
+              <div class="row">
+                <label class="row-label" for="shkmCount"><span class="icon">S</span><span>SHKM (počet jízd)</span></label>
+                <input id="shkmCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+              </div>
+            </div>
+            <p class="small">Smluvní jízdy (IAC / SHKM) se přepočítají na kilometry a odečtou z účtovaných km. Počet nech na 0, pokud jsi žádné takové jízdy neměl.</p>
           </div>
-          <p class="small" data-photo="hint">Fotky se uloží k výčetce ve firemním cloudu a slouží jako audit stopa při případném sporu.</p>
-        </section>
+        </details>
+
+        <details class="section-stack optional-section" id="photoSection">
+          <summary class="section-title">
+            <span class="section-heading"><span class="icon">F</span><h3 class="label">Fotky</h3></span>
+            <span class="optional-meta"><span class="optional-tag">Volitelné</span><span class="optional-chevron" aria-hidden="true">⌄</span></span>
+          </summary>
+          <div class="optional-body">
+            <div class="panel rows">
+              <div class="row"><label class="row-label" for="photoTacho"><span class="icon">T</span><span>Foto tachometru</span></label><input id="photoTacho" type="file" accept="image/*" capture="environment"></div>
+              <div class="row"><label class="row-label" for="photoReceipt"><span class="icon">Ú</span><span>Foto účtenky</span></label><input id="photoReceipt" type="file" accept="image/*" capture="environment"></div>
+            </div>
+            <p class="small" data-photo="hint">Fotky se uloží k výčetce ve firemním cloudu a slouží jako audit stopa při případném sporu.</p>
+          </div>
+        </details>
 
         <section class="panel pad result" id="resultCard">
           <div>
@@ -1268,7 +1341,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.46";
+      const VERSION = "hybrid-3.6.47";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
