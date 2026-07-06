@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.49">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.50">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
@@ -418,6 +418,37 @@
       color: var(--muted);
     }
     .detail-line strong { color: var(--text); text-align: right; }
+    .owner-panel { display: none; }
+    .owner-panel.active {
+      display: grid;
+      gap: 16px;
+    }
+    .owner-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .owner-kpis .metric {
+      min-height: 96px;
+    }
+    .owner-alerts {
+      display: grid;
+      gap: 8px;
+    }
+    .owner-alert {
+      display: grid;
+      gap: 3px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .owner-alert:last-child { border-bottom: 0; }
+    .owner-alert strong {
+      color: var(--text);
+      font-size: 14px;
+    }
+    .owner-alert.warn strong { color: var(--gold); }
+    .owner-alert.bad strong { color: var(--red); }
+    .owner-alert.ok strong { color: var(--green); }
  
     .actions {
       display: grid;
@@ -459,6 +490,10 @@
       overflow-x: auto;
       margin-top: 10px; /* ať piluly nejsou nalepené pod hlavičkou / předchozím prvkem */
       padding-bottom: 2px;
+    }
+    .owner-tabs {
+      flex-wrap: wrap;
+      overflow-x: visible;
     }
     .pill {
       flex: 0 0 auto;
@@ -758,7 +793,13 @@
       .row { grid-template-columns: 1fr; gap: 8px; }
       .row input, .row select, .row textarea { text-align: left; }
       input[type="number"] { text-align: right; }
-      .grid-3, .grid-2, .stats-layout { grid-template-columns: 1fr; }
+      .grid-3, .grid-2, .stats-layout, .owner-kpis { grid-template-columns: 1fr; }
+      .owner-tabs .pill {
+        flex: 1 1 calc(33.333% - 10px);
+        min-width: 96px;
+        padding-inline: 12px;
+        text-align: center;
+      }
       .history-top, .history-bottom { align-items: flex-start; flex-direction: column; }
       .actions { grid-template-columns: 1fr; }
       .result-total { display: grid; }
@@ -1217,99 +1258,123 @@
           </div>
         </section>
 
-        <button class="secondary-btn" id="goSettings" type="button" style="width:100%;display:none">Nastavení a správa →</button>
+        <button class="secondary-btn" id="goSettings" type="button" style="width:100%;display:none">Majitel →</button>
         </div>
 
         <div id="accountSettings" style="display:none">
         <button class="secondary-btn" id="backToAccount" type="button" style="width:auto;padding:8px 14px;margin-bottom:4px">← Zpět na účet</button>
 
         <section class="section-stack" id="adminSection" style="display:none">
-          <h3 class="label">Admin — přehled firmy</h3>
-          <div class="filters">
-            <button class="pill active" data-admin-period="week">Týden</button>
-            <button class="pill" data-admin-period="month">Měsíc</button>
-            <button class="pill" data-admin-period="all">Vše</button>
+          <h3 class="label">Majitel</h3>
+          <div class="filters owner-tabs">
+            <button class="pill active" data-owner-panel="overview">Přehled</button>
+            <button class="pill" data-owner-panel="drivers">Řidiči</button>
+            <button class="pill" data-owner-panel="vehicles">Vozidla</button>
+            <button class="pill" data-owner-panel="shifts">Výčetky</button>
+            <button class="pill" data-owner-panel="settings">Nastavení</button>
           </div>
-          <div class="panel pad" id="adminSummary"><p class="small">Načítám…</p></div>
-          <button class="secondary-btn" id="adminExportCsv" type="button" style="width:100%;margin-top:10px">Exportovat období za všechny řidiče (CSV)</button>
-          <div class="section-stack" style="margin-top:12px">
+
+          <div class="owner-panel active" id="ownerOverview">
+            <div class="filters">
+              <button class="pill active" data-admin-period="week">Týden</button>
+              <button class="pill" data-admin-period="month">Měsíc</button>
+              <button class="pill" data-admin-period="all">Vše</button>
+            </div>
+            <div class="owner-kpis" id="ownerKpis"></div>
+            <section class="section-stack">
+              <h3 class="label">Upozornění</h3>
+              <div class="panel pad owner-alerts" id="ownerAlerts"><p class="small">Načítám…</p></div>
+            </section>
+          </div>
+
+          <div class="owner-panel" id="ownerDrivers">
             <h3 class="label">Řidiči</h3>
             <div class="panel pad" id="adminDrivers"><p class="small">—</p></div>
           </div>
-          <div class="section-stack" style="margin-top:12px">
-            <h3 class="label">Poslední výčetky (vč. fotek)</h3>
+
+          <div class="owner-panel" id="ownerVehicles">
+            <h3 class="label">Vozidla</h3>
+            <div class="panel pad" id="ownerVehiclesList"><p class="small">—</p></div>
+            <button class="secondary-btn" id="goAnalytics" type="button" style="width:100%;margin-top:12px">Podrobná analytika →</button>
+          </div>
+
+          <div class="owner-panel" id="ownerShifts">
+            <div class="history-top">
+              <h3 class="label">Poslední výčetky</h3>
+              <button class="secondary-btn" id="adminExportCsv" type="button" style="width:auto;padding:8px 14px">CSV export</button>
+            </div>
             <div class="panel pad" id="adminShifts"><p class="small">—</p></div>
           </div>
-          <button class="secondary-btn" id="goAnalytics" type="button" style="width:100%;margin-top:12px">Podrobná analytika →</button>
-        </section>
 
-        <section class="section-stack">
-          <h3 class="label">Osobní údaje</h3>
-          <div class="panel rows">
-            <div class="row" id="profNameRow"><label class="row-label" for="profDriverName"><span class="icon">O</span><span>Jméno</span></label><input id="profDriverName" type="text" placeholder="Jméno řidiče"></div>
-            <div class="row"><label class="row-label" for="profDriverId"><span class="icon">P</span><span>ID / číslo průkazu</span></label><input id="profDriverId" type="text" placeholder="např. CZ-000000"></div>
-            <div class="row"><label class="row-label" for="profEmail"><span class="icon">@</span><span>Email</span></label><input id="profEmail" type="email" placeholder="jmeno@rbtaxi.cz"></div>
-            <div class="row"><label class="row-label" for="profPhone"><span class="icon">T</span><span>Telefon</span></label><input id="profPhone" type="tel" placeholder="+420 000 000 000"></div>
-          </div>
-          <p class="small">Jméno řidiče je dané firemním účtem. Kontaktní údaje slouží jen jako doplňkový profil v aplikaci.</p>
-        </section>
- 
-        <section class="section-stack">
-          <h3 class="label">Vozidlo</h3>
-          <div class="panel vehicle-card">
-            <div class="vehicle-mark"><img id="carPhotoImg" src="icon-192.png" alt="Foto vozidla"></div>
-            <div class="vehicle-info">
-              <div><span>Aktuální vozidlo</span><strong data-profile="activeRz">—</strong></div>
-              <div><span>Typ vozidla</span><strong>Taxi / osobní přeprava</strong></div>
-              <div><span>Najeto celkem (v appce)</span><strong data-profile="km">0 km</strong></div>
+          <div class="owner-panel" id="ownerSettings">
+            <section class="section-stack">
+              <h3 class="label">Osobní údaje</h3>
+              <div class="panel rows">
+                <div class="row" id="profNameRow"><label class="row-label" for="profDriverName"><span class="icon">O</span><span>Jméno</span></label><input id="profDriverName" type="text" placeholder="Jméno řidiče"></div>
+                <div class="row"><label class="row-label" for="profDriverId"><span class="icon">P</span><span>ID / číslo průkazu</span></label><input id="profDriverId" type="text" placeholder="např. CZ-000000"></div>
+                <div class="row"><label class="row-label" for="profEmail"><span class="icon">@</span><span>Email</span></label><input id="profEmail" type="email" placeholder="jmeno@rbtaxi.cz"></div>
+                <div class="row"><label class="row-label" for="profPhone"><span class="icon">T</span><span>Telefon</span></label><input id="profPhone" type="tel" placeholder="+420 000 000 000"></div>
+              </div>
+              <p class="small">Jméno řidiče je dané firemním účtem. Kontaktní údaje slouží jen jako doplňkový profil v aplikaci.</p>
+            </section>
+
+            <section class="section-stack">
+              <h3 class="label">Vozidlo</h3>
+              <div class="panel vehicle-card">
+                <div class="vehicle-mark"><img id="carPhotoImg" src="icon-192.png" alt="Foto vozidla"></div>
+                <div class="vehicle-info">
+                  <div><span>Aktuální vozidlo</span><strong data-profile="activeRz">—</strong></div>
+                  <div><span>Typ vozidla</span><strong>Taxi / osobní přeprava</strong></div>
+                  <div><span>Najeto celkem (v appce)</span><strong data-profile="km">0 km</strong></div>
+                </div>
+              </div>
+              <div class="photo-actions">
+                <label class="secondary-btn photo-btn">Nahrát foto auta<input id="carPhotoInput" type="file" accept="image/*" hidden></label>
+                <button class="secondary-btn photo-btn" id="carPhotoRemove" type="button">Odebrat</button>
+              </div>
+              <p class="small" data-photo="carHint">Foto se uloží k aktuálně vybranému vozidlu (RZ) v tomto zařízení.</p>
+            </section>
+
+            <section class="section-stack">
+              <h3 class="label">Parametry výpočtu</h3>
+              <div class="admin-lock-bar">
+                <span class="small" data-admin="status">Parametry nejsou chráněné PINem.</span>
+                <div class="admin-lock-actions">
+                  <button class="secondary-btn" id="adminSetPin" type="button">Nastavit PIN</button>
+                  <button class="secondary-btn" id="adminUnlock" type="button" style="display:none">Odemknout</button>
+                  <button class="secondary-btn" id="adminChangePin" type="button" style="display:none">Změnit PIN</button>
+                  <button class="secondary-btn" id="adminLockNow" type="button" style="display:none">Zamknout</button>
+                  <button class="secondary-btn" id="adminRemovePin" type="button" style="display:none">Zrušit PIN</button>
+                </div>
+              </div>
+              <p class="small" data-admin="disclaimer">Firemní parametry jsou řízené cloudem. Měnit je může pouze admin účet.</p>
+              <div class="panel rows">
+                <div class="row"><label class="row-label" for="setComm"><span class="icon">%</span><span>Provize</span></label><div class="input-unit"><input id="setComm" type="number" min="1" max="100" step="1"><span class="unit">%</span></div></div>
+                <div class="row"><label class="row-label" for="setFull"><span class="icon">F</span><span>Fix plná směna</span></label><div class="input-unit"><input id="setFull" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
+                <div class="row"><label class="row-label" for="setHalf"><span class="icon">1/2</span><span>Fix 1/2 směna</span></label><div class="input-unit"><input id="setHalf" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
+                <div class="row"><label class="row-label" for="setMinKm"><span class="icon">Kč</span><span>Min. tržba / km</span></label><div class="input-unit"><input id="setMinKm" type="number" min="0" step="1"><span class="unit">Kč/km</span></div></div>
+                <div class="row"><label class="row-label" for="setIacKm"><span class="icon">I</span><span>IAC km / jízda</span></label><div class="input-unit"><input id="setIacKm" type="number" min="0" step="1"><span class="unit">km</span></div></div>
+                <div class="row"><label class="row-label" for="setShkmKm"><span class="icon">S</span><span>SHKM km / jízda</span></label><div class="input-unit"><input id="setShkmKm" type="number" min="0" step="1"><span class="unit">km</span></div></div>
+              </div>
+            </section>
+
+            <section class="section-stack">
+              <h3 class="label">Správa vozidel</h3>
+              <div class="panel pad">
+                <label class="small" for="setRzList">RZ vozidel (jedno na řádek)</label>
+                <textarea id="setRzList" spellcheck="false"></textarea>
+              </div>
+            </section>
+
+            <div class="account-actions">
+              <button class="primary-btn" id="saveSettings">Uložit nastavení</button>
+              <button class="secondary-btn" id="exportData" type="button">Zálohovat data (JSON)</button>
+              <button class="secondary-btn" id="importDataBtn" type="button">Obnovit ze zálohy</button>
+              <input type="file" id="importDataFile" accept="application/json" style="display:none">
+              <button class="danger-btn" id="clearData">Smazat uložené výčetky</button>
             </div>
           </div>
-          <div class="photo-actions">
-            <label class="secondary-btn photo-btn">Nahrát foto auta<input id="carPhotoInput" type="file" accept="image/*" hidden></label>
-            <button class="secondary-btn photo-btn" id="carPhotoRemove" type="button">Odebrat</button>
-          </div>
-          <p class="small" data-photo="carHint">Foto se uloží k aktuálně vybranému vozidlu (RZ) v tomto zařízení.</p>
         </section>
- 
-        <section class="section-stack">
-          <h3 class="label">Parametry výpočtu</h3>
-          <div class="admin-lock-bar">
-            <span class="small" data-admin="status">Parametry nejsou chráněné PINem.</span>
-            <div class="admin-lock-actions">
-              <button class="secondary-btn" id="adminSetPin" type="button">Nastavit PIN</button>
-              <button class="secondary-btn" id="adminUnlock" type="button" style="display:none">Odemknout</button>
-              <button class="secondary-btn" id="adminChangePin" type="button" style="display:none">Změnit PIN</button>
-              <button class="secondary-btn" id="adminLockNow" type="button" style="display:none">Zamknout</button>
-              <button class="secondary-btn" id="adminRemovePin" type="button" style="display:none">Zrušit PIN</button>
-            </div>
-          </div>
-          <p class="small" data-admin="disclaimer">Firemní parametry jsou řízené cloudem. Měnit je může pouze admin účet.</p>
-          <div class="panel rows">
-            <div class="row"><label class="row-label" for="setComm"><span class="icon">%</span><span>Provize</span></label><div class="input-unit"><input id="setComm" type="number" min="1" max="100" step="1"><span class="unit">%</span></div></div>
-            <div class="row"><label class="row-label" for="setFull"><span class="icon">F</span><span>Fix plná směna</span></label><div class="input-unit"><input id="setFull" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
-            <div class="row"><label class="row-label" for="setHalf"><span class="icon">1/2</span><span>Fix 1/2 směna</span></label><div class="input-unit"><input id="setHalf" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
-            <div class="row"><label class="row-label" for="setMinKm"><span class="icon">Kč</span><span>Min. tržba / km</span></label><div class="input-unit"><input id="setMinKm" type="number" min="0" step="1"><span class="unit">Kč/km</span></div></div>
-            <div class="row"><label class="row-label" for="setIacKm"><span class="icon">I</span><span>IAC km / jízda</span></label><div class="input-unit"><input id="setIacKm" type="number" min="0" step="1"><span class="unit">km</span></div></div>
-            <div class="row"><label class="row-label" for="setShkmKm"><span class="icon">S</span><span>SHKM km / jízda</span></label><div class="input-unit"><input id="setShkmKm" type="number" min="0" step="1"><span class="unit">km</span></div></div>
-          </div>
-          <p class="small">Tyto hodnoty byly dřív zadané napevno v kódu (15 Kč/km, 33 km, 7 km). Teď jsou nastavitelné tady, beze změny obsahu appky.</p>
-        </section>
- 
-        <section class="section-stack">
-          <h3 class="label">Správa vozidel</h3>
-          <div class="panel pad">
-            <label class="small" for="setRzList">RZ vozidel (jedno na řádek)</label>
-            <textarea id="setRzList" spellcheck="false"></textarea>
-          </div>
-        </section>
- 
-        <div class="account-actions">
-          <button class="primary-btn" id="saveSettings">Uložit nastavení</button>
-          <button class="secondary-btn" id="exportData" type="button">Zálohovat data (JSON)</button>
-          <button class="secondary-btn" id="importDataBtn" type="button">Obnovit ze zálohy</button>
-          <input type="file" id="importDataFile" accept="application/json" style="display:none">
-          <button class="danger-btn" id="clearData">Smazat uložené výčetky</button>
-        </div>
         </div>
 
         <div id="accountAnalytics" style="display:none">
@@ -1345,7 +1410,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.49";
+      const VERSION = "hybrid-3.6.50";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
@@ -1402,6 +1467,12 @@
  
       function formatInt(value) {
         return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(Math.round(Number(value) || 0));
+      }
+
+      function countLabel(count, one, few, many) {
+        const value = Math.abs(Number(count) || 0);
+        const word = value === 1 ? one : (value >= 2 && value <= 4 ? few : many);
+        return `${formatInt(count)} ${word}`;
       }
  
       function formatDate(dateISO) {
@@ -1758,14 +1829,25 @@
         }
         const map = { main: "accountMain", settings: "accountSettings", analytics: "accountAnalytics" };
         Object.entries(map).forEach(([key, id]) => { const node = byId(id); if (node) node.style.display = key === which ? "" : "none"; });
-        const titleMap = { main: titles.account, settings: "Nastavení a správa", analytics: "Analytika firmy" };
+        const titleMap = { main: titles.account, settings: "Majitel", analytics: "Analytika firmy" };
         byId("pageTitle").textContent = titleMap[which];
         window.scrollTo({ top: 0 });
         if (which === "settings") {
+          ownerPanel("overview", false);
           refreshParamUi();
           renderAdmin();
         }
         if (which === "analytics") renderAnalytics();
+      }
+
+      function ownerPanel(which, shouldScroll = true) {
+        const ids = { overview: "ownerOverview", drivers: "ownerDrivers", vehicles: "ownerVehicles", shifts: "ownerShifts", settings: "ownerSettings" };
+        Object.entries(ids).forEach(([key, id]) => {
+          const node = byId(id);
+          if (node) node.classList.toggle("active", key === which);
+        });
+        els("[data-owner-panel]").forEach((button) => button.classList.toggle("active", button.dataset.ownerPanel === which));
+        if (shouldScroll) window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
       function navigate(view) {
@@ -2772,53 +2854,119 @@
         byId("adminSection").style.display = isAdmin ? "" : "none";
         if (!sb || !isAdmin) return;
         const from = adminPeriodFrom(state.adminPeriod);
-        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,km_real,shift_date,rz,photo_tacho,photo_receipt,metrics,created_at").order("created_at", { ascending: false });
+        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,company_owes,km_real,shift_date,rz,photo_tacho,photo_receipt,metrics,created_at").order("created_at", { ascending: false });
         if (from) query = query.gte("shift_date", from);
         const [{ data: shifts, error }, { data: drivers }] = await Promise.all([
           query,
           sb.from("drivers").select("id,name,login_code,is_admin,active").order("name")
         ]);
-        if (error) { byId("adminSummary").innerHTML = '<p class="small">Nepodařilo se načíst data.</p>'; return; }
+        if (error) {
+          byId("ownerKpis").innerHTML = '<div class="panel pad"><p class="small">Nepodařilo se načíst data.</p></div>';
+          byId("ownerAlerts").innerHTML = '<p class="small">Nepodařilo se načíst data.</p>';
+          return;
+        }
         const rows = shifts || [];
+        const driverRows = drivers || [];
+        const names = new Map(driverRows.map((d) => [d.id, d.name]));
+        const activeDrivers = driverRows.filter((d) => d.active !== false && !d.is_admin);
+        const today = todayISO();
+        const todayRows = rows.filter((s) => s.shift_date === today);
+        const costOf = (s) => (Number(s.metrics?.palivo) || 0) + (Number(s.metrics?.myti) || 0) + (Number(s.metrics?.jine) || 0);
+        const perKm = (trzba, km) => km > 0 ? trzba / km : 0;
+        const hasTachoStart = (s) => Boolean(s.photo_tacho || s.metrics?.photo_tacho || s.metrics?.photo_tacho_start);
+        const hasTachoEnd = (s) => Boolean(s.metrics?.photo_tacho_end);
+        const statusChip = (text, kind = "") => `<span class="chip ${kind}">${escapeHtml(text)}</span>`;
+        const line = (label, main, sub = "", extra = "") => `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:4px">
+          <div style="display:flex;justify-content:space-between;gap:8px"><span>${label}</span><strong>${main}</strong></div>
+          ${sub ? `<div class="small">${sub}</div>` : ""}${extra}
+        </div>`;
         const totals = rows.reduce((a, s) => {
-          a.count++; a.trzba += s.trzba || 0; a.vyplata += s.vyplata || 0; a.settlement += s.settlement || 0; a.km += s.km_real || 0;
+          a.count++;
+          a.trzba += s.trzba || 0;
+          a.vyplata += s.vyplata || 0;
+          a.settlement += s.settlement || 0;
+          a.km += s.km_real || 0;
+          a.costs += costOf(s);
+          if (s.company_owes || Number(s.settlement) < 0) a.companyOwes += Math.abs(Number(s.settlement) || 0);
           return a;
-        }, { count: 0, trzba: 0, vyplata: 0, settlement: 0, km: 0 });
-        byId("adminSummary").innerHTML = `
-          <div class="detail-list">
-            <div class="detail-line"><span>Směn celkem</span><strong>${formatInt(totals.count)}</strong></div>
-            <div class="detail-line"><span>Tržba celkem</span><strong>${money(totals.trzba)}</strong></div>
-            <div class="detail-line"><span>Výplaty řidičů</span><strong>${money(totals.vyplata)}</strong></div>
-            <div class="detail-line"><span>Najeté km</span><strong>${formatInt(totals.km)} km</strong></div>
-            <div class="detail-line"><span>K odevzdání celkem</span><strong>${money(totals.settlement)}</strong></div>
-          </div>`;
+        }, { count: 0, trzba: 0, vyplata: 0, settlement: 0, km: 0, costs: 0, companyOwes: 0 });
+        const todayTotals = todayRows.reduce((a, s) => {
+          a.count++;
+          a.trzba += s.trzba || 0;
+          a.vyplata += s.vyplata || 0;
+          a.settlement += s.settlement || 0;
+          return a;
+        }, { count: 0, trzba: 0, vyplata: 0, settlement: 0 });
+        const reportedToday = new Set(todayRows.map((s) => s.driver_id));
+        const missingToday = activeDrivers.filter((d) => !reportedToday.has(d.id));
+        byId("ownerKpis").innerHTML = [
+          `<div class="metric gold"><span>Dnes odevzdáno</span><strong>${formatInt(todayTotals.count)}</strong></div>`,
+          `<div class="metric"><span>Dnes tržba</span><strong>${money(todayTotals.trzba)}</strong></div>`,
+          `<div class="metric green"><span>Výplaty řidičům</span><strong>${money(totals.vyplata)}</strong></div>`,
+          `<div class="metric"><span>K odevzdání</span><strong>${money(totals.settlement)}</strong></div>`,
+          `<div class="metric"><span>Tržba / km</span><strong>${money(perKm(totals.trzba, totals.km))}</strong></div>`,
+          `<div class="metric"><span>Najeté km</span><strong>${formatInt(totals.km)}</strong></div>`,
+          `<div class="metric"><span>Aktivní řidiči</span><strong>${formatInt(activeDrivers.length)}</strong></div>`,
+          `<div class="metric red"><span>Ke kontrole</span><strong>${formatInt(missingToday.length)}</strong></div>`
+        ].join("");
+        const missingPhotos = rows.filter((s) => !hasTachoStart(s) || !hasTachoEnd(s)).slice(0, 6);
+        const cashIssues = rows.filter((s) => Number(s.metrics?.cashDiff) < 0).slice(0, 6);
+        const lowKm = rows.filter((s) => s.km_real > 0 && perKm(s.trzba || 0, s.km_real || 0) < Number(state.settings.minTrzbaPerKm || 0)).slice(0, 6);
+        const pending = pendingQueue().length;
+        const alerts = [];
+        if (missingToday.length) alerts.push({ kind: "bad", title: `${countLabel(missingToday.length, "řidič", "řidiči", "řidičů")} dnes ještě nemá výčetku`, body: missingToday.slice(0, 5).map((d) => escapeHtml(d.name)).join(", ") + (missingToday.length > 5 ? "…" : "") });
+        if (missingPhotos.length) alerts.push({ kind: "bad", title: `${countLabel(missingPhotos.length, "výčetka", "výčetky", "výčetek")} bez kompletních fotek tachometru`, body: missingPhotos.map((s) => `${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")}`).join("<br>") });
+        if (cashIssues.length) alerts.push({ kind: "warn", title: `${countLabel(cashIssues.length, "výčetka", "výčetky", "výčetek")} s chybějící hotovostí`, body: cashIssues.map((s) => `${escapeHtml(names.get(s.driver_id) || "—")} · ${money(Math.abs(Number(s.metrics?.cashDiff) || 0))}`).join("<br>") });
+        if (lowKm.length) alerts.push({ kind: "warn", title: `${countLabel(lowKm.length, "směna", "směny", "směn")} pod minimem tržby/km`, body: lowKm.map((s) => `${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")} · ${money(perKm(s.trzba || 0, s.km_real || 0))}/km`).join("<br>") });
+        if (pending) alerts.push({ kind: "warn", title: `Čeká ${countLabel(pending, "neodeslaná výčetka", "neodeslané výčetky", "neodeslaných výčetek")}`, body: "Zkontroluj synchronizaci cloudu v účtu." });
+        if (!alerts.length) alerts.push({ kind: "ok", title: "Všechno vypadá v pořádku", body: "Pro vybrané období nejsou žádná zásadní upozornění." });
+        byId("ownerAlerts").innerHTML = alerts.map((a) => `<div class="owner-alert ${a.kind}"><strong>${a.title}</strong><span class="small">${a.body}</span></div>`).join("");
         const byDriver = new Map();
         rows.forEach((s) => {
-          const cur = byDriver.get(s.driver_id) || { count: 0, trzba: 0, vyplata: 0, settlement: 0 };
-          cur.count++; cur.trzba += s.trzba || 0; cur.vyplata += s.vyplata || 0; cur.settlement += s.settlement || 0;
+          const cur = byDriver.get(s.driver_id) || { count: 0, trzba: 0, vyplata: 0, settlement: 0, km: 0, last: "" };
+          cur.count++;
+          cur.trzba += s.trzba || 0;
+          cur.vyplata += s.vyplata || 0;
+          cur.settlement += s.settlement || 0;
+          cur.km += s.km_real || 0;
+          if (!cur.last || s.shift_date > cur.last) cur.last = s.shift_date;
           byDriver.set(s.driver_id, cur);
         });
-        const list = (drivers || []).map((d) => {
-          const a = byDriver.get(d.id) || { count: 0, trzba: 0, vyplata: 0, settlement: 0 };
-          const status = d.active ? "" : ' · <span class="small" style="color:#e6796b">deaktivován</span>';
+        const list = driverRows.map((d) => {
+          const a = byDriver.get(d.id) || { count: 0, trzba: 0, vyplata: 0, settlement: 0, km: 0, last: "" };
+          const status = d.active === false ? statusChip("Neaktivní", "bad") : d.is_admin ? statusChip("Admin") : statusChip("Aktivní");
           const btn = d.is_admin ? "" :
             `<button class="secondary-btn" data-driver-toggle="${d.id}" data-active="${d.active}" style="width:auto;padding:6px 10px;margin-top:6px">${d.active ? "Deaktivovat" : "Aktivovat"}</button>`;
-          return `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:4px">
-            <div style="display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(d.name)} <span class="small">(${escapeHtml(d.login_code)})</span>${status}</span><strong>${money(a.trzba)}</strong></div>
-            <div class="small">${formatInt(a.count)} směn · výplata ${money(a.vyplata)} · k odevzdání ${money(a.settlement)}</div>
-            ${btn}
-          </div>`;
+          return line(`${escapeHtml(d.name)} <span class="small">(${escapeHtml(d.login_code)})</span> ${status}`, money(a.trzba), `${formatInt(a.count)} směn · ${formatInt(a.km)} km · ${money(perKm(a.trzba, a.km))}/km · výplata ${money(a.vyplata)} · k odevzdání ${money(a.settlement)}${a.last ? ` · poslední ${escapeHtml(formatDate(a.last))}` : ""}`, btn);
         }).join("");
         byId("adminDrivers").innerHTML = list || '<p class="small">Žádní řidiči.</p>';
+        const byVehicle = new Map();
+        rows.forEach((s) => {
+          const rz = s.rz || "—";
+          const cur = byVehicle.get(rz) || { count: 0, trzba: 0, km: 0, costs: 0, last: "", driver: "" };
+          cur.count++;
+          cur.trzba += s.trzba || 0;
+          cur.km += s.km_real || 0;
+          cur.costs += costOf(s);
+          if (!cur.last || s.shift_date > cur.last) {
+            cur.last = s.shift_date;
+            cur.driver = names.get(s.driver_id) || "—";
+          }
+          byVehicle.set(rz, cur);
+        });
+        const vehicles = Array.from(byVehicle.entries())
+          .sort((a, b) => b[1].trzba - a[1].trzba)
+          .map(([rz, v]) => line(escapeHtml(rz), `${money(perKm(v.trzba, v.km))}/km`, `${formatInt(v.count)} směn · ${money(v.trzba)} · ${formatInt(v.km)} km · náklady ${money(v.costs)}${v.last ? ` · naposledy ${escapeHtml(formatDate(v.last))} (${escapeHtml(v.driver)})` : ""}`))
+          .join("");
+        byId("ownerVehiclesList").innerHTML = vehicles || '<p class="small">Za zvolené období zatím nejsou data vozidel.</p>';
 
         // Poslední výčetky napříč řidiči + odkazy na fotky (tachometr / účtenka)
-        const names = new Map((drivers || []).map((d) => [d.id, d.name]));
         const recent = rows.slice(0, 15).map((s) => {
           const photos = photoLinks(s);
-          return `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:2px">
-            <div style="display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")}</span><strong>${money(s.trzba)}</strong></div>
-            <div class="small">${photos ? `Fotky: ${photos}` : "Bez fotek"}</div>
-          </div>`;
+          const issue = (!hasTachoStart(s) || !hasTachoEnd(s) || Number(s.metrics?.cashDiff) < 0 || (s.km_real > 0 && perKm(s.trzba || 0, s.km_real || 0) < Number(state.settings.minTrzbaPerKm || 0)));
+          const label = `${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")} ${issue ? statusChip("Ke kontrole", "bad") : statusChip("OK")}`;
+          const sub = `${formatInt(s.km_real || 0)} km · výplata ${money(s.vyplata)} · k odevzdání ${money(s.settlement)}${photos ? `<br>Fotky: ${photos}` : "<br>Bez fotek"}`;
+          return line(label, money(s.trzba), sub);
         }).join("");
         byId("adminShifts").innerHTML = recent || '<p class="small">Za zvolené období zatím nejsou žádné výčetky.</p>';
       }
@@ -2884,6 +3032,7 @@
         byId("carPhotoRemove").addEventListener("click", removeCarPhoto);
         byId("goSettings").addEventListener("click", () => accountPanel("settings"));
         byId("backToAccount").addEventListener("click", () => accountPanel("main"));
+        els("[data-owner-panel]").forEach((button) => button.addEventListener("click", () => ownerPanel(button.dataset.ownerPanel)));
         byId("goAnalytics").addEventListener("click", () => accountPanel("analytics"));
         byId("backFromAnalytics").addEventListener("click", () => accountPanel("settings"));
         els("[data-anl-period]").forEach((b) => b.addEventListener("click", () => {
