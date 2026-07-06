@@ -2,14 +2,14 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.45">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.46">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
-  <!-- Cloud (volitelný, hybrid): appka funguje i bez něj / offline -->
+  <!-- Firemní cloud login je povinný; bez přihlášení zůstává aplikace zamčená. -->
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -40,7 +40,7 @@
     body {
       margin: 0;
       min-height: 100dvh;
-      padding-bottom: calc(92px + env(safe-area-inset-bottom));
+      padding-bottom: 0;
       background:
         radial-gradient(circle at 86% 12%, rgba(0, 245, 160, .08), transparent 28%),
         radial-gradient(circle at 24% 0%, rgba(215, 187, 112, .12), transparent 30%),
@@ -48,7 +48,7 @@
       color: var(--text);
       font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       -webkit-font-smoothing: antialiased;
-      touch-action: manipulation; /* žádný zoom dvojťukem/gestem na iOS ani Androidu */
+      touch-action: manipulation;
       -webkit-text-size-adjust: 100%;
     }
  
@@ -67,6 +67,14 @@
     input:focus, select:focus, textarea:focus {
       border-color: rgba(215, 187, 112, .68);
       box-shadow: 0 0 0 3px rgba(215, 187, 112, .12);
+    }
+    button:focus-visible, a:focus-visible, .pill:focus-visible, .nav-btn:focus-visible, .photo-btn:focus-visible {
+      outline: 3px solid rgba(181, 255, 242, .9);
+      outline-offset: 3px;
+    }
+    .is-invalid {
+      border-color: rgba(255, 143, 134, .72) !important;
+      box-shadow: 0 0 0 3px rgba(255, 143, 134, .16) !important;
     }
     input[type="number"] { text-align: right; }
     /* iOS/Safari centruje hodnotu datumového pole — srovnat vlevo jako ostatní pole */
@@ -159,6 +167,21 @@
       border-color: rgba(34, 230, 194, .22);
       background: rgba(34, 230, 194, .08);
       color: #b5fff2;
+    }
+    .badge.sync[data-state="locked"], .badge.sync[data-state="pending"] {
+      border-color: rgba(255, 200, 87, .3);
+      background: rgba(255, 200, 87, .1);
+      color: #ffe3a1;
+    }
+    .badge.sync[data-state="synced"] {
+      border-color: rgba(34, 230, 194, .22);
+      background: rgba(34, 230, 194, .08);
+      color: #b5fff2;
+    }
+    .badge.sync[data-state="offline"] {
+      border-color: rgba(255, 143, 134, .28);
+      background: rgba(255, 143, 134, .08);
+      color: #ffd8d3;
     }
     .dot {
       width: 8px;
@@ -288,6 +311,15 @@
       border-color: rgba(255, 143, 134, .24);
       background: rgba(255, 143, 134, .08);
       color: #ffd8d3;
+    }
+    .form-error {
+      scroll-margin-top: 156px;
+    }
+    .field-error {
+      grid-column: 1 / -1;
+      margin: -2px 0 0;
+      color: #ffd8d3;
+      font-size: 13px;
     }
  
     .result {
@@ -589,19 +621,19 @@
     .bottom-nav {
       position: fixed;
       left: 0;
-      bottom: 0;
+      top: calc(76px + env(safe-area-inset-top));
       z-index: 40;
       width: 100%;
-      padding-bottom: env(safe-area-inset-bottom); /* domovský indikátor iPhonu nesmí ležet přes tlačítka */
-      border-top: 1px solid var(--line);
-      border-radius: 16px 16px 0 0;
+      padding-bottom: 0;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
       background: rgba(16, 22, 36, .92);
       backdrop-filter: blur(22px);
-      box-shadow: 0 -10px 44px rgba(0, 0, 0, .36);
+      box-shadow: 0 8px 34px rgba(0, 0, 0, .28);
     }
     .bottom-nav-inner {
       width: min(1120px, 100%);
-      height: 72px;
+      height: 64px;
       margin: 0 auto;
       padding: 0 12px;
       display: grid;
@@ -611,12 +643,12 @@
     }
     .nav-btn {
       min-width: 0;
-      height: 50px;
+      height: 44px;
       border-radius: 12px;
-      display: grid;
+      display: flex;
       place-items: center;
       align-content: center;
-      gap: 2px;
+      gap: 8px;
       color: rgba(169, 175, 195, .78);
       font-size: 12px;
       font-weight: 900;
@@ -636,7 +668,7 @@
     .toast {
       position: fixed;
       left: 50%;
-      bottom: calc(92px + env(safe-area-inset-bottom));
+      bottom: 24px;
       z-index: 60;
       transform: translateX(-50%) translateY(16px);
       opacity: 0;
@@ -675,6 +707,23 @@
       .version { font-size: 10px; }
       .badge { padding: 7px 9px; font-size: 11px; }
       .panel.pad { padding: 16px; }
+      .stack { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+      .bottom-nav {
+        top: auto;
+        bottom: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        border-top: 1px solid var(--line);
+        border-bottom: 0;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -10px 44px rgba(0, 0, 0, .36);
+      }
+      .bottom-nav-inner { height: 72px; }
+      .nav-btn {
+        height: 50px;
+        display: grid;
+        gap: 2px;
+      }
+      .toast { bottom: calc(92px + env(safe-area-inset-bottom)); }
     }
 
     /* Zámek parametrů (PIN) */
@@ -761,6 +810,10 @@
     .auth-title { font-size: 26px; margin: 4px 0 20px; }
     .auth-card .row { text-align: left; }
 
+    @media (min-width: 761px) {
+      main.shell { padding-top: 112px; }
+    }
+
     /* Tisk / uložení do PDF */
     #printSheet { display: none; }
     @media print {
@@ -816,10 +869,11 @@
         <div class="row"><label class="row-label" for="regCode"><span class="icon">#</span><span>Přihlašovací kód</span></label><input id="regCode" type="text" autocapitalize="none" autocomplete="username" placeholder="např. novak (bez mezer a diakritiky)"></div>
         <div class="row"><label class="row-label" for="regPin"><span class="icon">*</span><span>PIN (min. 6 znaků)</span></label><input id="regPin" type="password" inputmode="numeric" autocomplete="new-password" placeholder="zvol si PIN (aspoň 6 znaků)"></div>
         <div class="row"><label class="row-label" for="regInvite"><span class="icon">K</span><span>Zvací kód</span></label><input id="regInvite" type="text" autocapitalize="characters" placeholder="firemní zvací kód"></div>
+        <p class="small" style="text-align:left;margin-top:8px">Zvací kód ti předá vedení firmy. Bez něj účet nevytvoříš.</p>
         <button class="primary-btn" id="cloudRegister" type="button" style="width:100%;margin-top:12px">Vytvořit účet</button>
         <p class="small" style="text-align:center;margin-top:10px">Už máš účet? <a href="#" id="cloudShowLogin">Přihlas se</a></p>
       </div>
-      <p class="small" data-cloud="status" style="text-align:center;margin-top:14px">Pro vstup do aplikace se přihlas nebo si vytvoř účet. Zvací kód dostaneš od vedení firmy.</p>
+      <p class="small" data-cloud="status" style="text-align:center;margin-top:14px">Pro vstup do aplikace je nutné firemní přihlášení. Zvací kód dostaneš od vedení firmy.</p>
     </div>
   </div>
 
@@ -834,7 +888,7 @@
       </div>
       <div class="status-row">
         <div class="badge" id="headerCalcStatus"><span class="dot"></span><span>Připraveno k výpočtu</span></div>
-        <div class="badge online"><span class="dot"></span><span>Online</span></div>
+        <div class="badge sync" id="syncStatus" data-state="locked"><span class="dot"></span><span>Přihlášení vyžadováno</span></div>
       </div>
     </div>
   </header>
@@ -852,8 +906,9 @@
         <section class="panel pad hero">
           <h2>Výpočet směny</h2>
           <p class="muted">Vyplň směnu a jedním klikem vytvoř čistou výčetku.</p>
-          <p class="small" id="shiftCloudNudge" style="display:none;margin-top:8px">Nejsi přihlášený k firmě — výčetky zůstávají jen v telefonu. <a href="#" id="shiftCloudNudgeLink">Přihlásit se v Účtu</a></p>
+          <p class="small" id="shiftCloudNudge" style="display:none;margin-top:8px">Výčetku může uložit jen přihlášený firemní účet.</p>
         </section>
+        <div class="notice bad form-error" id="formError" tabindex="-1" style="display:none"></div>
  
         <section class="section-stack">
           <div class="section-title"><span class="icon">Ř</span><h3 class="label">Základní údaje</h3></div>
@@ -967,7 +1022,7 @@
             <div class="row"><label class="row-label" for="photoTacho"><span class="icon">T</span><span>Foto tachometru</span></label><input id="photoTacho" type="file" accept="image/*" capture="environment"></div>
             <div class="row"><label class="row-label" for="photoReceipt"><span class="icon">Ú</span><span>Foto účtenky</span></label><input id="photoReceipt" type="file" accept="image/*" capture="environment"></div>
           </div>
-          <p class="small" data-photo="hint">Fotky se uloží k výčetce jen když jsi přihlášený do cloudu — slouží jako audit stopa při případném sporu.</p>
+          <p class="small" data-photo="hint">Fotky se uloží k výčetce ve firemním cloudu a slouží jako audit stopa při případném sporu.</p>
         </section>
 
         <section class="panel pad result" id="resultCard">
@@ -1078,7 +1133,7 @@
             <div id="cloudLoggedIn">
               <p class="small"><strong data-cloud="who">—</strong></p>
               <p class="small" data-cloud="syncInfo">—</p>
-              <button class="secondary-btn" id="cloudUpload" type="button" style="width:100%">Nahrát historii z telefonu do cloudu</button>
+              <button class="secondary-btn" id="cloudUpload" type="button" style="width:100%">Odeslat čekající výčetky do cloudu</button>
               <button class="secondary-btn" id="cloudChangePin" type="button" style="width:100%;margin-top:8px">Změnit PIN</button>
               <button class="secondary-btn" id="cloudLogout" type="button" style="width:100%;margin-top:8px">Odhlásit</button>
             </div>
@@ -1119,7 +1174,7 @@
             <div class="row"><label class="row-label" for="profEmail"><span class="icon">@</span><span>Email</span></label><input id="profEmail" type="email" placeholder="jmeno@rbtaxi.cz"></div>
             <div class="row"><label class="row-label" for="profPhone"><span class="icon">T</span><span>Telefon</span></label><input id="profPhone" type="tel" placeholder="+420 000 000 000"></div>
           </div>
-          <p class="small">Tyto kontaktní údaje zůstávají jen v tomto telefonu. Přihlášení k firmě a odesílání výčetek řešíš výše v sekci Firemní účet.</p>
+          <p class="small">Jméno řidiče je dané firemním účtem. Kontaktní údaje slouží jen jako doplňkový profil v aplikaci.</p>
         </section>
  
         <section class="section-stack">
@@ -1151,7 +1206,7 @@
               <button class="secondary-btn" id="adminRemovePin" type="button" style="display:none">Zrušit PIN</button>
             </div>
           </div>
-          <p class="small" data-admin="disclaimer">PIN je jen brzda proti nechtěné změně parametrů, ne skutečné zabezpečení. Aplikace nemá server — data i tento PIN žijí jen v tomto telefonu, takže technicky zdatný uživatel je dokáže přečíst i obejít.</p>
+          <p class="small" data-admin="disclaimer">Firemní parametry jsou řízené cloudem. Měnit je může pouze admin účet.</p>
           <div class="panel rows">
             <div class="row"><label class="row-label" for="setComm"><span class="icon">%</span><span>Provize</span></label><div class="input-unit"><input id="setComm" type="number" min="1" max="100" step="1"><span class="unit">%</span></div></div>
             <div class="row"><label class="row-label" for="setFull"><span class="icon">F</span><span>Fix plná směna</span></label><div class="input-unit"><input id="setFull" type="number" min="0" step="10"><span class="unit">Kč</span></div></div>
@@ -1213,7 +1268,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.45";
+      const VERSION = "hybrid-3.6.46";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
@@ -1434,17 +1489,64 @@
         text.textContent = metrics.delta >= 0 ? "Směna je nad minimem" : "Směna je pod minimem";
       }
  
+      function clearValidation() {
+        const box = byId("formError");
+        if (box) {
+          box.textContent = "";
+          box.style.display = "none";
+        }
+        els(".field-error").forEach((node) => node.remove());
+        els(".is-invalid").forEach((node) => {
+          node.classList.remove("is-invalid");
+          node.removeAttribute("aria-invalid");
+          node.removeAttribute("aria-describedby");
+        });
+      }
+
+      function showValidationError(error) {
+        if (!error) return;
+        const box = byId("formError");
+        if (box) {
+          box.textContent = error.message;
+          box.style.display = "block";
+        }
+        const field = error.field ? byId(error.field) : null;
+        if (field) {
+          const row = field.closest(".row");
+          const id = `${field.id}Error`;
+          field.classList.add("is-invalid");
+          field.setAttribute("aria-invalid", "true");
+          field.setAttribute("aria-describedby", id);
+          if (row && !byId(id)) {
+            const msg = document.createElement("p");
+            msg.className = "field-error";
+            msg.id = id;
+            msg.textContent = error.message;
+            row.appendChild(msg);
+          }
+          row?.scrollIntoView({ block: "center", behavior: "smooth" });
+          setTimeout(() => field.focus({ preventScroll: true }), 180);
+        } else if (box) {
+          box.focus({ preventScroll: true });
+          box.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+        toast(error.message);
+      }
+
       function validate(metrics) {
         const values = readForm();
-        if (!values.driver) return "Vyplň jméno řidiče.";
-        if (!values.rz) return "Vyber RZ vozidla.";
-        if (values.kmStart < 0 || values.kmEnd < 0) return "Kilometry nemohou být záporné.";
-        if (values.kmEnd < values.kmStart) return "Konečné km musí být vyšší než počáteční.";
-        if (values.trzba <= 0) return "Tržba musí být větší než 0.";
-        if (values.pristavne >= values.trzba && values.pristavne > 0) return "Přístavné je vyšší nebo rovno tržbě. Netto by bylo záporné.";
-        if (!Number.isInteger(values.iacCount) || !Number.isInteger(values.shkmCount)) return "IAC a SHKM musí být celé číslo.";
-        if (metrics.invoiceKm > metrics.kmReal) return `Smluvní km (${formatInt(metrics.invoiceKm)}) jsou vyšší než najeté km (${formatInt(metrics.kmReal)}).`;
-        return "";
+        if (!state.cloud.user) return { field: "", message: "Pro uložení výčetky se nejdřív přihlas firemním účtem." };
+        if (!values.driver) return { field: "driver", message: "Vyplň jméno řidiče." };
+        if (!values.rz) return { field: "rz", message: "Vyber RZ vozidla." };
+        if (values.kmStart < 0) return { field: "kmStart", message: "Počáteční kilometry nemohou být záporné." };
+        if (values.kmEnd < 0) return { field: "kmEnd", message: "Konečné kilometry nemohou být záporné." };
+        if (values.kmEnd < values.kmStart) return { field: "kmEnd", message: "Konečné km musí být vyšší než počáteční." };
+        if (values.trzba <= 0) return { field: "trzba", message: "Tržba musí být větší než 0." };
+        if (values.pristavne >= values.trzba && values.pristavne > 0) return { field: "pristavne", message: "Přístavné je vyšší nebo rovno tržbě. Netto by bylo záporné." };
+        if (!Number.isInteger(values.iacCount)) return { field: "iacCount", message: "IAC musí být celé číslo." };
+        if (!Number.isInteger(values.shkmCount)) return { field: "shkmCount", message: "SHKM musí být celé číslo." };
+        if (metrics.invoiceKm > metrics.kmReal) return { field: "iacCount", message: `Smluvní km (${formatInt(metrics.invoiceKm)}) jsou vyšší než najeté km (${formatInt(metrics.kmReal)}).` };
+        return null;
       }
  
       function createShift() {
@@ -1452,9 +1554,10 @@
         const metrics = compute(values);
         const error = validate(metrics);
         if (error) {
-          toast(error);
+          showValidationError(error);
           return null;
         }
+        clearValidation();
         return {
           id: crypto.randomUUID(),
           savedAt: new Date().toISOString(),
@@ -1492,6 +1595,11 @@
       }
  
       async function saveShift() {
+        if (!state.cloud.user) {
+          showValidationError({ field: "", message: "Pro uložení výčetky se přihlas firemním účtem." });
+          updateAuthGate();
+          return;
+        }
         const shift = createShift();
         if (!shift) return;
         const hasPhotos = byId("photoTacho").files[0] || byId("photoReceipt").files[0];
@@ -1502,12 +1610,13 @@
         state.shifts.unshift(shift);
         writeJSON(historyKey, state.shifts);
         clearDraft();
-        if (state.cloud.user) { enqueueRows([shiftToRow(shift)]); syncPending(); }
+        enqueueRows([shiftToRow(shift)]);
+        syncPending();
         byId("photoTacho").value = "";
         byId("photoReceipt").value = "";
         renderAll();
         navigate("history");
-        toast(state.cloud.user ? "Výčetka uložená (a odeslaná do cloudu)." : "Výčetka je uložená v historii.");
+        toast("Výčetka uložená a připravená k synchronizaci.");
       }
  
       function resetForm() {
@@ -1698,9 +1807,7 @@
         // Foto aktuálního vozidla (cloud → lokální → výchozí ikona)
         setCarPhoto(currentRz());
         const carHint = el('[data-photo="carHint"]');
-        if (carHint) carHint.textContent = state.cloud.user
-          ? "Foto se uloží k vozidlu do firemního cloudu — uvidí ho všichni řidiči i vedení."
-          : "Foto se zatím uloží jen v telefonu. Po přihlášení do cloudu ho uvidí celá firma.";
+        if (carHint) carHint.textContent = "Foto se uloží k vozidlu do firemního cloudu — uvidí ho všichni řidiči i vedení.";
       }
 
       function vehiclePublicUrl(rz) {
@@ -1794,10 +1901,10 @@
               state.settings.vehiclePhotoV[rz] = Date.now();
               toast(`Foto vozidla ${rz} uložené a sdílené s firmou.`);
             } else {
-              toast(`Foto ${rz} uložené v telefonu (do cloudu se nepodařilo nahrát).`);
+              toast(`Foto ${rz} zůstalo zatím v aplikaci; cloud upload selhal.`);
             }
           } else {
-            toast(`Foto vozidla ${rz} uložené (přihlas se do cloudu pro sdílení s firmou).`);
+            toast("Přihlášení vypršelo. Přihlas se znovu a fotku nahraj do cloudu.");
           }
           writeJSON(settingsKey, state.settings);
           renderProfile();
@@ -1867,15 +1974,14 @@
       // Parametry ovlivňující výplatu (bez seznamu RZ, ten je jen lokální pomůcka).
       const payParamIds = ["setComm", "setFull", "setHalf", "setMinKm", "setIacKm", "setShkmKm"];
 
-      // Rozhoduje o přístupu k parametrům: přihlášený → řídí je cloud (mění jen admin);
-      // nepřihlášený (offline) → původní lokální PIN zámek.
+      // Rozhoduje o přístupu k parametrům: firemní cloud je autoritativní, mění jen admin.
       function refreshParamUi() {
         const lockBar = document.querySelector(".admin-lock-bar");
         const disclaimer = el('[data-admin="disclaimer"]');
         if (!state.cloud.user) {
-          if (lockBar) lockBar.style.display = "";
-          applyAdminLock();
-          if (disclaimer) disclaimer.textContent = "PIN je jen brzda proti nechtěné změně parametrů, ne skutečné zabezpečení. Bez přihlášení žijí parametry jen v tomto telefonu.";
+          adminParamIds.forEach((id) => { const node = byId(id); if (node) node.disabled = true; });
+          if (lockBar) lockBar.style.display = "none";
+          if (disclaimer) disclaimer.textContent = "Pro zobrazení a správu firemních parametrů se přihlas firemním účtem.";
           return;
         }
         const isAdmin = !!state.cloud.driver?.is_admin;
@@ -2264,6 +2370,29 @@
         updateCloudUI();
       }
 
+      function updateSyncBadge() {
+        const badge = byId("syncStatus");
+        if (!badge) return;
+        const label = badge.querySelector("span:last-child");
+        const pending = pendingQueue().length;
+        let stateName = "locked";
+        let text = "Přihlášení vyžadováno";
+        if (state.cloud.user) {
+          if (!navigator.onLine) {
+            stateName = "offline";
+            text = pending ? `Offline · čeká ${pending}` : "Offline";
+          } else if (pending) {
+            stateName = "pending";
+            text = `Čeká na odeslání: ${pending}`;
+          } else {
+            stateName = "synced";
+            text = "Synchronizováno";
+          }
+        }
+        badge.dataset.state = stateName;
+        if (label) label.textContent = text;
+      }
+
       function updateCloudUI() {
         const loggedIn = !!state.cloud.user;
         const li = byId("cloudLoggedIn");
@@ -2274,6 +2403,7 @@
           const pending = pendingQueue().length;
           el('[data-cloud="syncInfo"]').textContent = pending ? `Čeká na odeslání: ${pending} výčetek.` : "Vše synchronizováno.";
         }
+        updateSyncBadge();
         updateCloudNudge();
         updateAuthGate();
       }
@@ -2284,10 +2414,10 @@
         if (gate) gate.style.display = state.cloud.user ? "none" : "flex";
       }
 
-      // Pobídka na Směně (nepřihlášený) + skrytí lokálního pole Jméno, když je řidič v cloudu.
+      // Appka je cloud-only; login gate řeší nepřihlášený stav.
       function updateCloudNudge() {
         const nudge = byId("shiftCloudNudge");
-        if (nudge) nudge.style.display = state.cloud.user ? "none" : "";
+        if (nudge) nudge.style.display = "none";
         const nameRow = byId("profNameRow");
         if (nameRow) nameRow.style.display = state.cloud.user ? "none" : "";
         applyDriverLock();
@@ -2312,7 +2442,7 @@
       async function refreshCloudUser() {
         const sb = sbClient();
         if (!sb) { updateCloudUI(); return; }
-        // getSession čte session z úložiště (funguje i offline pro už přihlášeného řidiče)
+        // getSession obnoví firemní session z úložiště pro přihlášeného řidiče.
         const { data } = await sb.auth.getSession();
         const user = data?.session?.user || null;
         state.cloud.user = user;
@@ -2329,7 +2459,7 @@
           }
           if (drv) {
             state.cloud.driver = drv;
-            writeJSON(driverCacheKey, drv); // cache pro offline (zámek jména musí držet i bez signálu)
+            writeJSON(driverCacheKey, drv); // cache drží jméno řidiče stabilní při obnově session
           } else {
             state.cloud.driver = readJSON(driverCacheKey, null);
           }
@@ -2346,7 +2476,7 @@
 
       async function cloudLogin() {
         const sb = sbClient();
-        if (!sb) { toast("Cloud není dostupný (offline nebo blokovaný)."); return; }
+        if (!sb) { toast("Připojení k firemnímu cloudu není dostupné."); return; }
         const code = byId("cloudCode").value.trim().toLowerCase();
         const pin = byId("cloudPin").value.trim();
         if (!code || !pin) { toast("Zadej přihlašovací kód i PIN."); return; }
@@ -2381,7 +2511,7 @@
         toast(`Zařazeno ${rows.length} výčetek k odeslání…`);
         await syncPending();
         const left = pendingQueue().length;
-        toast(left ? `Zbývá odeslat ${left} (offline?).` : "Historie je nahraná v cloudu.");
+        toast(left ? `Zbývá odeslat ${left}. Zkontroluj připojení nebo oprávnění.` : "Vše je synchronizováno s cloudem.");
       }
 
       async function cloudChangePin() {
@@ -2551,7 +2681,7 @@
 
       async function cloudRegister() {
         const sb = sbClient();
-        if (!sb) { toast("Cloud není dostupný (offline nebo blokovaný)."); return; }
+        if (!sb) { toast("Připojení k firemnímu cloudu není dostupné."); return; }
         const name = byId("regName").value.trim();
         const code = byId("regCode").value.trim().toLowerCase();
         const pin = byId("regPin").value.trim();
@@ -2578,7 +2708,12 @@
       }
 
       function bind() {
-        fieldIds.forEach((id) => byId(id).addEventListener("input", updateLive));
+        fieldIds.forEach((id) => {
+          const node = byId(id);
+          const onEdit = () => { clearValidation(); updateLive(); };
+          node.addEventListener("input", onEdit);
+          node.addEventListener("change", onEdit);
+        });
         byId("saveShift").addEventListener("click", saveShift);
         byId("resetForm").addEventListener("click", resetForm);
         byId("copySummary").addEventListener("click", copySummary);
@@ -2599,7 +2734,8 @@
           els("[data-anl-period]").forEach((x) => x.classList.toggle("active", x === b));
           renderAnalytics();
         }));
-        byId("shiftCloudNudgeLink").addEventListener("click", (e) => { e.preventDefault(); navigate("account"); });
+        const nudgeLink = byId("shiftCloudNudgeLink");
+        if (nudgeLink) nudgeLink.addEventListener("click", (e) => { e.preventDefault(); navigate("account"); });
         byId("adminSetPin").addEventListener("click", () => setAdminPin(false));
         byId("adminUnlock").addEventListener("click", unlockAdmin);
         byId("adminChangePin").addEventListener("click", () => setAdminPin(true));
@@ -2630,7 +2766,8 @@
           const link = e.target.closest("[data-photo-path]");
           if (link) { e.preventDefault(); openPhoto(link.dataset.photoPath); }
         });
-        window.addEventListener("online", () => { if (state.cloud.user) syncPending(); });
+        window.addEventListener("online", () => { updateSyncBadge(); if (state.cloud.user) syncPending(); });
+        window.addEventListener("offline", updateSyncBadge);
         byId("saveSettings").addEventListener("click", saveSettings);
         byId("clearData").addEventListener("click", clearData);
         byId("exportData").addEventListener("click", exportData);
