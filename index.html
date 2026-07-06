@@ -1104,6 +1104,10 @@
             <h3 class="label">Řidiči</h3>
             <div class="panel pad" id="adminDrivers"><p class="small">—</p></div>
           </div>
+          <div class="section-stack" style="margin-top:12px">
+            <h3 class="label">Poslední výčetky (vč. fotek)</h3>
+            <div class="panel pad" id="adminShifts"><p class="small">—</p></div>
+          </div>
           <button class="secondary-btn" id="goAnalytics" type="button" style="width:100%;margin-top:12px">Podrobná analytika →</button>
         </section>
 
@@ -2478,7 +2482,7 @@
         byId("adminSection").style.display = isAdmin ? "" : "none";
         if (!sb || !isAdmin) return;
         const from = adminPeriodFrom(state.adminPeriod);
-        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,km_real");
+        let query = sb.from("shifts").select("driver_id,trzba,vyplata,settlement,km_real,shift_date,rz,photo_tacho,photo_receipt,created_at").order("created_at", { ascending: false });
         if (from) query = query.gte("shift_date", from);
         const [{ data: shifts, error }, { data: drivers }] = await Promise.all([
           query,
@@ -2516,6 +2520,20 @@
           </div>`;
         }).join("");
         byId("adminDrivers").innerHTML = list || '<p class="small">Žádní řidiči.</p>';
+
+        // Poslední výčetky napříč řidiči + odkazy na fotky (tachometr / účtenka)
+        const names = new Map((drivers || []).map((d) => [d.id, d.name]));
+        const recent = rows.slice(0, 15).map((s) => {
+          const photos = [
+            s.photo_tacho ? `<a href="#" data-photo-path="${escapeHtml(s.photo_tacho)}">tachometr</a>` : "",
+            s.photo_receipt ? `<a href="#" data-photo-path="${escapeHtml(s.photo_receipt)}">účtenka</a>` : ""
+          ].filter(Boolean).join(" · ");
+          return `<div class="detail-line" style="flex-direction:column;align-items:stretch;gap:2px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")}</span><strong>${money(s.trzba)}</strong></div>
+            <div class="small">${photos ? `Fotky: ${photos}` : "Bez fotek"}</div>
+          </div>`;
+        }).join("");
+        byId("adminShifts").innerHTML = recent || '<p class="small">Za zvolené období zatím nejsou žádné výčetky.</p>';
       }
 
       async function toggleDriverActive(id, makeActive) {
@@ -2605,6 +2623,10 @@
           if (btn) toggleDriverActive(btn.dataset.driverToggle, btn.dataset.active !== "true");
         });
         byId("historyList").addEventListener("click", (e) => {
+          const link = e.target.closest("[data-photo-path]");
+          if (link) { e.preventDefault(); openPhoto(link.dataset.photoPath); }
+        });
+        byId("adminShifts").addEventListener("click", (e) => {
           const link = e.target.closest("[data-photo-path]");
           if (link) { e.preventDefault(); openPhoto(link.dataset.photoPath); }
         });
