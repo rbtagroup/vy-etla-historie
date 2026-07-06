@@ -1227,6 +1227,7 @@
       const SUPABASE_URL = "https://oadjzmotlwwoekydgwxv.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZGp6bW90bHd3b2VreWRnd3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxOTU2NTYsImV4cCI6MjA5ODc3MTY1Nn0.a9aps1jxAqp_6DOszNKVgBkFbOy9jfJitd86swevCNU";
       const cloudQueueKey = "rb-hybrid-cloud-queue-v1";
+      const driverCacheKey = "rb-hybrid-cloud-driver-v1";
 
       const state = {
         shifts: [],
@@ -1338,7 +1339,10 @@
           if (id === "date") return;
           values[id] = numericIds.has(id) ? num(byId(id).value) : byId(id).value.trim();
         });
-        values.driver = values.driver || state.settings.driverName || "";
+        // Přihlášený řidič: jméno vždy z registrace (nejde odeslat výčetku za jiného)
+        values.driver = (state.cloud.user && state.cloud.driver?.name)
+          ? state.cloud.driver.name
+          : (values.driver || state.settings.driverName || "");
         values.hasCashActual = byId("cashActual").value.trim() !== "";
         return values;
       }
@@ -2282,6 +2286,23 @@
         if (nudge) nudge.style.display = state.cloud.user ? "none" : "";
         const nameRow = byId("profNameRow");
         if (nameRow) nameRow.style.display = state.cloud.user ? "none" : "";
+        applyDriverLock();
+      }
+
+      // Jméno řidiče ve výčetce je dané registrací — přihlášený ho nemůže měnit,
+      // aby nikdo neodeslal výčetku za někoho jiného.
+      function applyDriverLock() {
+        const input = byId("driver");
+        if (!input) return;
+        const name = state.cloud.user ? (state.cloud.driver?.name || "") : "";
+        if (name) {
+          if (input.value !== name) input.value = name;
+          input.disabled = true;
+          input.title = "Jméno je dané registrací a nejde změnit.";
+        } else {
+          input.disabled = false;
+          input.title = "";
+        }
       }
 
       async function refreshCloudUser() {
@@ -2302,13 +2323,17 @@
             toast("Tento účet je deaktivovaný. Kontaktuj vedení.");
             return;
           }
-          state.cloud.driver = drv || null;
-          // Auto-předvyplnění jména řidiče do formuláře směny
-          if (drv?.name && !byId("driver").value.trim()) byId("driver").value = drv.name;
+          if (drv) {
+            state.cloud.driver = drv;
+            writeJSON(driverCacheKey, drv); // cache pro offline (zámek jména musí držet i bez signálu)
+          } else {
+            state.cloud.driver = readJSON(driverCacheKey, null);
+          }
           await loadPayConfig(); // firemní parametry z cloudu (autoritativní)
         } else {
           state.cloud.driver = null;
         }
+        applyDriverLock();
         updateCloudUI();
         refreshParamUi();
         renderProfile();
@@ -2336,6 +2361,8 @@
         if (sb) await sb.auth.signOut();
         state.cloud.user = null;
         state.cloud.driver = null;
+        try { localStorage.removeItem(driverCacheKey); } catch { /* storage unavailable */ }
+        applyDriverLock();
         updateCloudUI();
         refreshParamUi();
         renderProfile();
