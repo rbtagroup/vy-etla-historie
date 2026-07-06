@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.48">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.49">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
@@ -1217,7 +1217,7 @@
           </div>
         </section>
 
-        <button class="secondary-btn" id="goSettings" type="button" style="width:100%">Nastavení a správa →</button>
+        <button class="secondary-btn" id="goSettings" type="button" style="width:100%;display:none">Nastavení a správa →</button>
         </div>
 
         <div id="accountSettings" style="display:none">
@@ -1345,7 +1345,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.48";
+      const VERSION = "hybrid-3.6.49";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
@@ -1752,11 +1752,19 @@
  
       // Přepínání panelů uvnitř Účtu: identita / nastavení / analytika.
       function accountPanel(which) {
+        if (which !== "main" && !isOwner()) {
+          toast("Správa firmy je dostupná jen majiteli.");
+          which = "main";
+        }
         const map = { main: "accountMain", settings: "accountSettings", analytics: "accountAnalytics" };
         Object.entries(map).forEach(([key, id]) => { const node = byId(id); if (node) node.style.display = key === which ? "" : "none"; });
         const titleMap = { main: titles.account, settings: "Nastavení a správa", analytics: "Analytika firmy" };
         byId("pageTitle").textContent = titleMap[which];
         window.scrollTo({ top: 0 });
+        if (which === "settings") {
+          refreshParamUi();
+          renderAdmin();
+        }
         if (which === "analytics") renderAnalytics();
       }
 
@@ -2071,6 +2079,36 @@
       // Parametry ovlivňující výplatu (bez seznamu RZ, ten je jen lokální pomůcka).
       const payParamIds = ["setComm", "setFull", "setHalf", "setMinKm", "setIacKm", "setShkmKm"];
 
+      function isOwner() {
+        return !!state.cloud.driver?.is_admin;
+      }
+
+      function requireOwner() {
+        if (isOwner()) return true;
+        toast("Správa firmy je dostupná jen majiteli.");
+        return false;
+      }
+
+      function updateOwnerAccess() {
+        const owner = isOwner();
+        const button = byId("goSettings");
+        if (button) button.style.display = owner ? "" : "none";
+        if (!owner) {
+          const settings = byId("accountSettings");
+          const analytics = byId("accountAnalytics");
+          const settingsOpen = settings && settings.style.display !== "none";
+          const analyticsOpen = analytics && analytics.style.display !== "none";
+          if (settingsOpen || analyticsOpen) {
+            if (settings) settings.style.display = "none";
+            if (analytics) analytics.style.display = "none";
+            const main = byId("accountMain");
+            if (main) main.style.display = "";
+            const accountActive = el('.view.active')?.dataset.view === "account";
+            if (accountActive) byId("pageTitle").textContent = titles.account;
+          }
+        }
+      }
+
       // Rozhoduje o přístupu k parametrům: firemní cloud je autoritativní, mění jen admin.
       function refreshParamUi() {
         const lockBar = document.querySelector(".admin-lock-bar");
@@ -2199,6 +2237,7 @@
       }
 
       async function saveSettings() {
+        if (!requireOwner()) return;
         const rzList = byId("setRzList").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
         state.settings = {
           commRate: clamp(num(byId("setComm").value), 1, 100),
@@ -2305,6 +2344,7 @@
       }
 
       function exportData() {
+        if (!requireOwner()) return;
         const payload = {
           exportedAt: new Date().toISOString(),
           appVersion: VERSION,
@@ -2324,6 +2364,7 @@
       }
  
       function importData(file) {
+        if (!requireOwner()) return;
         if (!file) return;
         const reader = new FileReader();
         reader.onload = () => {
@@ -2351,6 +2392,7 @@
       }
  
       function clearData() {
+        if (!requireOwner()) return;
         if (!confirm("Opravdu smazat všechny uložené výčetky?")) return;
         state.shifts = [];
         writeJSON(historyKey, state.shifts);
@@ -2521,6 +2563,7 @@
           el('[data-cloud="syncInfo"]').textContent = pending ? `Čeká na odeslání: ${pending} výčetek.` : "Vše synchronizováno.";
         }
         updateSyncBadge();
+        updateOwnerAccess();
         updateCloudNudge();
         updateAuthGate();
       }

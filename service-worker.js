@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "rb-taxi-vycetka-";
 // Verze cache = verze appky + datum nasazení. Při každé změně bump tuto
 // konstantu, ať je invalidace cache explicitní (nespoléhá se jen na network-first).
-const CACHE_VERSION = "v3.26.0-2026-07-06-required-tacho-photos";
+const CACHE_VERSION = "v3.27.0-2026-07-06-owner-only-admin";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 // Knihovna Supabase z CDN — kešujeme, ať přihlašovací brána funguje i offline
 // pro už přihlášeného řidiče (jinak by se offline nenačetla a nešlo by dovnitř).
