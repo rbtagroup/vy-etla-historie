@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
   <link rel="manifest" href="manifest.json?v=hybrid-3.6.45">
@@ -40,7 +40,7 @@
     body {
       margin: 0;
       min-height: 100dvh;
-      padding-bottom: 92px;
+      padding-bottom: calc(92px + env(safe-area-inset-bottom));
       background:
         radial-gradient(circle at 86% 12%, rgba(0, 245, 160, .08), transparent 28%),
         radial-gradient(circle at 24% 0%, rgba(215, 187, 112, .12), transparent 30%),
@@ -67,6 +67,9 @@
       box-shadow: 0 0 0 3px rgba(215, 187, 112, .12);
     }
     input[type="number"] { text-align: right; }
+    /* iOS/Safari centruje hodnotu datumového pole — srovnat vlevo jako ostatní pole */
+    input[type="date"] { text-align: left; }
+    input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     h1, h2, h3, p { margin: 0; }
     h1 {
       font-size: clamp(24px, 3.2vw, 32px);
@@ -87,6 +90,7 @@
       position: sticky;
       top: 0;
       z-index: 30;
+      padding-top: env(safe-area-inset-top); /* stavová lišta iPhonu (PWA na ploše) */
       border-bottom: 1px solid var(--line);
       background: rgba(7, 11, 20, .86);
       backdrop-filter: blur(20px);
@@ -585,6 +589,7 @@
       bottom: 0;
       z-index: 40;
       width: 100%;
+      padding-bottom: env(safe-area-inset-bottom); /* domovský indikátor iPhonu nesmí ležet přes tlačítka */
       border-top: 1px solid var(--line);
       border-radius: 16px 16px 0 0;
       background: rgba(16, 22, 36, .92);
@@ -628,7 +633,7 @@
     .toast {
       position: fixed;
       left: 50%;
-      bottom: 92px;
+      bottom: calc(92px + env(safe-area-inset-bottom));
       z-index: 60;
       transform: translateX(-50%) translateY(16px);
       opacity: 0;
@@ -648,7 +653,7 @@
     }
  
     @media (max-width: 760px) {
-      body { padding-bottom: 86px; }
+      body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
       .shell { padding: 0 8px; }
       main { padding-top: 22px; }
       .status-row .badge:first-child { display: none; }
@@ -734,7 +739,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
       background: radial-gradient(circle at 50% 0%, #101a30, var(--bg) 70%);
       overflow-y: auto;
     }
@@ -917,7 +922,7 @@
         </section>
  
         <section class="section-stack">
-          <div class="section-title"><span class="icon">N</span><h3 class="label">Náklady a nehotovost</h3></div>
+          <div class="section-title"><span class="icon">N</span><h3 class="label">Náklady a bezhotovostní platby</h3></div>
           <div class="panel rows">
             <div class="row"><label class="row-label" for="palivo"><span class="icon">F</span><span>Palivo</span></label><div class="input-unit"><input id="palivo" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
             <div class="row"><label class="row-label" for="myti"><span class="icon">M</span><span>Mytí</span></label><div class="input-unit"><input id="myti" type="number" min="0" inputmode="decimal" placeholder="0"><span class="unit">Kč</span></div></div>
