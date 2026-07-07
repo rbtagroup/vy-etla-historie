@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.51">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.52">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
@@ -518,6 +518,78 @@
       gap: 5px;
     }
     .owner-focus strong { color: #ffd8d3; }
+    .owner-list {
+      display: grid;
+      gap: 10px;
+    }
+    .owner-card {
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .025);
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+    }
+    .owner-card-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+    .owner-card-title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      color: var(--text);
+      font-weight: 900;
+    }
+    .owner-card-main {
+      color: var(--gold);
+      font-size: 18px;
+      font-weight: 950;
+      white-space: nowrap;
+      text-align: right;
+    }
+    .owner-card-meta,
+    .owner-card-foot {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .owner-card-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .owner-mini-metric {
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      padding: 8px;
+      min-width: 0;
+      background: rgba(255, 255, 255, .025);
+    }
+    .owner-mini-metric span {
+      display: block;
+      color: var(--muted-2);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .owner-mini-metric strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--text);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .owner-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .compact-action {
       width: auto;
       min-height: 38px;
@@ -877,6 +949,9 @@
       .row input, .row select, .row textarea { text-align: left; }
       input[type="number"] { text-align: right; }
       .grid-3, .grid-2, .stats-layout, .owner-kpis, .photo-status-grid { grid-template-columns: 1fr; }
+      .owner-card-head { grid-template-columns: 1fr; }
+      .owner-card-main { text-align: left; }
+      .owner-card-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .file-picker { justify-items: stretch; }
       .file-trigger { width: 100%; }
       .file-state { text-align: left; }
@@ -1530,7 +1605,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.51";
+      const VERSION = "hybrid-3.6.52";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
@@ -3044,6 +3119,19 @@
           <div style="display:flex;justify-content:space-between;gap:8px"><span>${label}</span><strong>${main}</strong></div>
           ${sub ? `<div class="small">${sub}</div>` : ""}${extra}
         </div>`;
+        const miniMetric = (label, value) => `<div class="owner-mini-metric"><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`;
+        const ownerCard = ({ title, main, badge = "", meta = "", metrics = "", foot = "", actions = "" }) => `<article class="owner-card">
+          <div class="owner-card-head">
+            <div>
+              <div class="owner-card-title"><span>${title}</span>${badge}</div>
+              ${meta ? `<div class="owner-card-meta">${meta}</div>` : ""}
+            </div>
+            <div class="owner-card-main">${main}</div>
+          </div>
+          ${metrics ? `<div class="owner-card-metrics">${metrics}</div>` : ""}
+          ${foot ? `<div class="owner-card-foot">${foot}</div>` : ""}
+          ${actions ? `<div class="owner-card-actions">${actions}</div>` : ""}
+        </article>`;
         const totals = rows.reduce((a, s) => {
           a.count++;
           a.trzba += s.trzba || 0;
@@ -3111,9 +3199,22 @@
           const status = d.active === false ? statusChip("Neaktivní", "bad") : d.is_admin ? statusChip("Majitel") : statusChip("Aktivní");
           const btn = d.is_admin ? "" :
             `<button class="secondary-btn compact-action" data-driver-toggle="${d.id}" data-active="${d.active}">${d.active ? "Pozastavit účet" : "Aktivovat účet"}</button>`;
-          return line(`${escapeHtml(d.name)} <span class="small">(${escapeHtml(d.login_code)})</span> ${status}`, money(a.trzba), `${formatInt(a.count)} směn · ${formatInt(a.km)} km · ${money(perKm(a.trzba, a.km))}/km · výplata ${money(a.vyplata)} · k odevzdání ${money(a.settlement)}${a.last ? ` · poslední ${escapeHtml(formatDate(a.last))}` : ""}`, btn);
+          return ownerCard({
+            title: escapeHtml(d.name),
+            badge: status,
+            main: money(a.trzba),
+            meta: `Kód: ${escapeHtml(d.login_code)}${a.last ? ` · poslední ${escapeHtml(formatDate(a.last))}` : " · bez výčetky"}`,
+            metrics: [
+              miniMetric("Směny", formatInt(a.count)),
+              miniMetric("Km", formatInt(a.km)),
+              miniMetric("Tržba/km", `${money(perKm(a.trzba, a.km))}/km`),
+              miniMetric("Výplata", money(a.vyplata)),
+              miniMetric("K odevzdání", money(a.settlement))
+            ].join(""),
+            actions: btn
+          });
         }).join("");
-        byId("adminDrivers").innerHTML = list || '<p class="small">Žádní řidiči.</p>';
+        byId("adminDrivers").innerHTML = list ? `<div class="owner-list">${list}</div>` : '<p class="small">Žádní řidiči.</p>';
         const byVehicle = new Map();
         rows.forEach((s) => {
           const rz = s.rz || "—";
@@ -3130,19 +3231,38 @@
         });
         const vehicles = Array.from(byVehicle.entries())
           .sort((a, b) => b[1].trzba - a[1].trzba)
-          .map(([rz, v]) => line(escapeHtml(rz), `${money(perKm(v.trzba, v.km))}/km`, `${formatInt(v.count)} směn · ${money(v.trzba)} · ${formatInt(v.km)} km · náklady ${money(v.costs)}${v.last ? ` · naposledy ${escapeHtml(formatDate(v.last))} (${escapeHtml(v.driver)})` : ""}`))
+          .map(([rz, v]) => ownerCard({
+            title: escapeHtml(rz),
+            main: `${money(perKm(v.trzba, v.km))}/km`,
+            meta: v.last ? `Naposledy ${escapeHtml(formatDate(v.last))} · ${escapeHtml(v.driver)}` : "Bez poslední směny",
+            metrics: [
+              miniMetric("Směny", formatInt(v.count)),
+              miniMetric("Tržba", money(v.trzba)),
+              miniMetric("Km", formatInt(v.km)),
+              miniMetric("Náklady", money(v.costs))
+            ].join("")
+          }))
           .join("");
-        byId("ownerVehiclesList").innerHTML = vehicles || '<p class="small">Za zvolené období zatím nejsou data vozidel.</p>';
+        byId("ownerVehiclesList").innerHTML = vehicles ? `<div class="owner-list">${vehicles}</div>` : '<p class="small">Za zvolené období zatím nejsou data vozidel.</p>';
 
         // Poslední výčetky napříč řidiči + odkazy na fotky (tachometr / účtenka)
         const recent = rows.slice(0, 15).map((s) => {
           const photos = photoLinks(s);
           const issue = (!hasTachoStart(s) || !hasTachoEnd(s) || Number(s.metrics?.cashDiff) < 0 || (s.km_real > 0 && perKm(s.trzba || 0, s.km_real || 0) < Number(state.settings.minTrzbaPerKm || 0)));
-          const label = `${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")} · ${escapeHtml(s.rz || "—")} ${issue ? statusChip("Ke kontrole", "bad") : statusChip("OK")}`;
-          const sub = `${formatInt(s.km_real || 0)} km · výplata ${money(s.vyplata)} · k odevzdání ${money(s.settlement)}${photos ? `<br>Fotky: ${photos}` : "<br>Bez fotek"}`;
-          return line(label, money(s.trzba), sub);
+          return ownerCard({
+            title: `${escapeHtml(formatDate(s.shift_date))} · ${escapeHtml(names.get(s.driver_id) || "—")}`,
+            badge: issue ? statusChip("Ke kontrole", "bad") : statusChip("OK"),
+            main: money(s.trzba),
+            meta: `RZ: ${escapeHtml(s.rz || "—")}`,
+            metrics: [
+              miniMetric("Km", formatInt(s.km_real || 0)),
+              miniMetric("Výplata", money(s.vyplata)),
+              miniMetric("K odevzdání", money(s.settlement))
+            ].join(""),
+            foot: photos ? `Fotky: ${photos}` : "Bez fotek"
+          });
         }).join("");
-        byId("adminShifts").innerHTML = recent || '<p class="small">Za zvolené období zatím nejsou žádné výčetky.</p>';
+        byId("adminShifts").innerHTML = recent ? `<div class="owner-list">${recent}</div>` : '<p class="small">Za zvolené období zatím nejsou žádné výčetky.</p>';
       }
 
       async function toggleDriverActive(id, makeActive) {
