@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0e1f">
   <title>RB TAXI - Výčetka řidiče</title>
-  <link rel="manifest" href="manifest.json?v=hybrid-3.6.52">
+  <link rel="manifest" href="manifest.json?v=hybrid-3.6.53">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script defer src="calc.js?v=3.6.45"></script>
@@ -1465,6 +1465,7 @@
             <button class="pill" data-owner-panel="drivers">Řidiči</button>
             <button class="pill" data-owner-panel="vehicles">Vozidla</button>
             <button class="pill" data-owner-panel="shifts">Výčetky</button>
+            <button class="pill" data-owner-panel="analytics">Analýza</button>
             <button class="pill" data-owner-panel="settings">Nastavení</button>
           </div>
 
@@ -1490,7 +1491,6 @@
           <div class="owner-panel" id="ownerVehicles">
             <h3 class="label">Vozidla</h3>
             <div class="panel pad" id="ownerVehiclesList"><p class="small">—</p></div>
-            <button class="secondary-btn" id="goAnalytics" type="button" style="width:100%;margin-top:12px">Analýza firmy →</button>
           </div>
 
           <div class="owner-panel" id="ownerShifts">
@@ -1499,6 +1499,21 @@
               <button class="secondary-btn" id="adminExportCsv" type="button" style="width:auto;padding:8px 14px">CSV export</button>
             </div>
             <div class="panel pad" id="adminShifts"><p class="small">—</p></div>
+          </div>
+
+          <div class="owner-panel" id="ownerAnalytics">
+            <h3 class="label">Analýza firmy</h3>
+            <div class="filters">
+              <button class="pill" data-anl-period="week">Týden</button>
+              <button class="pill active" data-anl-period="month">Měsíc</button>
+              <button class="pill" data-anl-period="all">Vše</button>
+            </div>
+            <div class="panel pad" id="anlHeadline"><p class="small">Načítám…</p></div>
+            <section class="section-stack"><h3 class="label">Tržba / km podle vozidla</h3><div class="panel pad" id="anlVehicles"><p class="small">—</p></div></section>
+            <section class="section-stack"><h3 class="label">Podle řidiče</h3><div class="panel pad" id="anlDrivers"><p class="small">—</p></div></section>
+            <section class="section-stack"><h3 class="label">Podle dne v týdnu</h3><div class="panel pad" id="anlWeekday"><p class="small">—</p></div></section>
+            <section class="section-stack"><h3 class="label">Náklady a anomálie</h3><div class="panel pad" id="anlCosts"><p class="small">—</p></div></section>
+            <p class="small">Pro účetnictví použij export do Excelu / CSV (v Nastavení nebo Historii). Přímé napojení na fakturační systém je samostatný krok.</p>
           </div>
 
           <div class="owner-panel" id="ownerSettings">
@@ -1571,21 +1586,6 @@
           </div>
         </section>
         </div>
-
-        <div id="accountAnalytics" style="display:none">
-        <button class="secondary-btn" id="backFromAnalytics" type="button" style="width:auto;padding:8px 14px;margin-bottom:4px">← Zpět na správu</button>
-        <div class="filters">
-          <button class="pill" data-anl-period="week">Týden</button>
-          <button class="pill active" data-anl-period="month">Měsíc</button>
-          <button class="pill" data-anl-period="all">Vše</button>
-        </div>
-        <div class="panel pad" id="anlHeadline"><p class="small">Načítám…</p></div>
-        <section class="section-stack"><h3 class="label">Tržba / km podle vozidla</h3><div class="panel pad" id="anlVehicles"><p class="small">—</p></div></section>
-        <section class="section-stack"><h3 class="label">Podle řidiče</h3><div class="panel pad" id="anlDrivers"><p class="small">—</p></div></section>
-        <section class="section-stack"><h3 class="label">Podle dne v týdnu</h3><div class="panel pad" id="anlWeekday"><p class="small">—</p></div></section>
-        <section class="section-stack"><h3 class="label">Náklady a anomálie</h3><div class="panel pad" id="anlCosts"><p class="small">—</p></div></section>
-        <p class="small">Pro účetnictví použij export do Excelu / CSV (v Nastavení nebo Historii). Přímé napojení na fakturační systém je samostatný krok.</p>
-        </div>
       </div>
     </section>
   </main>
@@ -1605,7 +1605,7 @@
  
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const VERSION = "hybrid-3.6.52";
+      const VERSION = "hybrid-3.6.53";
       const historyKey = "rb-hybrid-shifts-v1";
       const settingsKey = "rb-hybrid-settings-v1";
       const draftKey = "rb-hybrid-draft-v1";
@@ -2046,32 +2046,35 @@
         });
       }
  
-      // Přepínání panelů uvnitř Účtu: identita / nastavení / analytika.
+      // Přepínání panelů uvnitř Účtu: identita / majitelská část.
       function accountPanel(which) {
+        const ownerTarget = which === "analytics" ? "analytics" : "overview";
+        const target = which === "analytics" ? "settings" : which;
         if (which !== "main" && !isOwner()) {
           toast("Správa firmy je dostupná jen majiteli.");
           which = "main";
         }
-        const map = { main: "accountMain", settings: "accountSettings", analytics: "accountAnalytics" };
-        Object.entries(map).forEach(([key, id]) => { const node = byId(id); if (node) node.style.display = key === which ? "" : "none"; });
-        const titleMap = { main: titles.account, settings: "Majitel", analytics: "Analytika firmy" };
-        byId("pageTitle").textContent = titleMap[which];
+        const normalized = which === "analytics" ? target : which;
+        const map = { main: "accountMain", settings: "accountSettings" };
+        Object.entries(map).forEach(([key, id]) => { const node = byId(id); if (node) node.style.display = key === normalized ? "" : "none"; });
+        const titleMap = { main: titles.account, settings: "Majitel" };
+        byId("pageTitle").textContent = titleMap[normalized];
         window.scrollTo({ top: 0 });
-        if (which === "settings") {
-          ownerPanel("overview", false);
+        if (normalized === "settings") {
+          ownerPanel(ownerTarget, false);
           refreshParamUi();
           renderAdmin();
         }
-        if (which === "analytics") renderAnalytics();
       }
 
       function ownerPanel(which, shouldScroll = true) {
-        const ids = { overview: "ownerOverview", drivers: "ownerDrivers", vehicles: "ownerVehicles", shifts: "ownerShifts", settings: "ownerSettings" };
+        const ids = { overview: "ownerOverview", drivers: "ownerDrivers", vehicles: "ownerVehicles", shifts: "ownerShifts", analytics: "ownerAnalytics", settings: "ownerSettings" };
         Object.entries(ids).forEach(([key, id]) => {
           const node = byId(id);
           if (node) node.classList.toggle("active", key === which);
         });
         els("[data-owner-panel]").forEach((button) => button.classList.toggle("active", button.dataset.ownerPanel === which));
+        if (which === "analytics") renderAnalytics();
         if (shouldScroll) window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
@@ -2079,7 +2082,7 @@
         els(".view").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
         els(".nav-btn").forEach((node) => node.classList.toggle("active", node.dataset.nav === view));
         // Účet vždy otevři na identitě; až pak nastav titulek dané záložky
-        ["accountSettings", "accountAnalytics"].forEach((id) => { const n = byId(id); if (n) n.style.display = "none"; });
+        ["accountSettings"].forEach((id) => { const n = byId(id); if (n) n.style.display = "none"; });
         const accMain = byId("accountMain");
         if (accMain) accMain.style.display = "";
         byId("pageTitle").textContent = titles[view];
@@ -2415,12 +2418,9 @@
         if (button) button.style.display = owner ? "" : "none";
         if (!owner) {
           const settings = byId("accountSettings");
-          const analytics = byId("accountAnalytics");
           const settingsOpen = settings && settings.style.display !== "none";
-          const analyticsOpen = analytics && analytics.style.display !== "none";
-          if (settingsOpen || analyticsOpen) {
+          if (settingsOpen) {
             if (settings) settings.style.display = "none";
-            if (analytics) analytics.style.display = "none";
             const main = byId("accountMain");
             if (main) main.style.display = "";
             const accountActive = el('.view.active')?.dataset.view === "account";
@@ -3329,8 +3329,6 @@
         byId("goSettings").addEventListener("click", () => accountPanel("settings"));
         byId("backToAccount").addEventListener("click", () => accountPanel("main"));
         els("[data-owner-panel]").forEach((button) => button.addEventListener("click", () => ownerPanel(button.dataset.ownerPanel)));
-        byId("goAnalytics").addEventListener("click", () => accountPanel("analytics"));
-        byId("backFromAnalytics").addEventListener("click", () => accountPanel("settings"));
         els("[data-anl-period]").forEach((b) => b.addEventListener("click", () => {
           state.analyticsPeriod = b.dataset.anlPeriod;
           els("[data-anl-period]").forEach((x) => x.classList.toggle("active", x === b));
